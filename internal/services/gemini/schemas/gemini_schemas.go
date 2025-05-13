@@ -52,7 +52,7 @@ type geminiSystemInstruction struct {
 func NewGeminiLLMInferenceRequest(inputText string, sourceLang lingua.Language, targetLang lingua.Language) geminiLLMInferenceRequest {
 	return geminiLLMInferenceRequest{
 		GenerationConfig: geminiModelConfig{
-			Temperature:      0.5,
+			Temperature:      0.2,
 			TopP:             0.95,
 			TopK:             40,
 			MaxOutputTokens:  8192,

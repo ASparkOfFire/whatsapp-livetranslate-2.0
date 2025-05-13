@@ -29,6 +29,7 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 
 	cmd := strings.TrimPrefix(parts[0], "/")
 	switch cmd {
+
 	case "ping":
 		if msgInfo.IsFromMe {
 			h.sendResponse(msgInfo, fmt.Sprintf("Pong: %s", time.Since(start).String()))

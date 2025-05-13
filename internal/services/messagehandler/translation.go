@@ -88,13 +88,13 @@ func (h *WhatsMeowEventHandler) handleQuotedMessageTranslation(msg *waProto.Mess
 	langCode := strings.TrimPrefix(text, "/")
 	// Check if there's a space - if so, it's not a pure language code
 	if strings.Contains(langCode, " ") {
-		fmt.Println("Not a valid quoted translation command (has spaces):", text)
+		fmt.Printf("Inline translation command \"%s\": %s\n", langCode, text)
 		return false
 	}
 
 	targetLang := utils.GetLangByCode(langCode)
 	if targetLang == lingua.Unknown {
-		fmt.Println("Not a valid language code in quoted message - ignoring")
+		fmt.Printf("Not a valid language code \"%s\" in quoted message - ignoring\n", langCode)
 		return false
 	}
 
