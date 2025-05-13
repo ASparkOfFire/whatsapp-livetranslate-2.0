@@ -1,0 +1,14 @@
+services:
+  whatsapp-bot:
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      IS_DOCKER: "true"
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+    volumes:
+      - whatsapp-go:/data
+
+volumes:
+  whatsapp-go:
