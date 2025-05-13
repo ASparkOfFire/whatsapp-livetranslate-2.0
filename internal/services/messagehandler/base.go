@@ -3,6 +3,7 @@ package messagehandler
 import (
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
 	"go.mau.fi/whatsmeow"
+	"go.mau.fi/whatsmeow/types/events"
 )
 
 type WhatsMeowEventHandler struct {
@@ -27,4 +28,11 @@ func NewWhatsMeowEventHandler(client *whatsmeow.Client, detector services.LangDe
 		}
 	}
 	return handler, nil
+}
+
+func (h *WhatsMeowEventHandler) HandleEvents(evt any) {
+	switch v := evt.(type) {
+	case *events.Message:
+		h.handleMessage(v.Message, v.Info)
+	}
 }
