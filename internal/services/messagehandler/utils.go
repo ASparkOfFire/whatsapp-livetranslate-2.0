@@ -1,11 +1,25 @@
 package messagehandler
 
 import (
+	"errors"
+
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 	waProto "go.mau.fi/whatsmeow/proto/waE2E"
 )
 
-// getMessageType returns the message type based on the waProto.Message structure
+// Function to check if a message is a media message
+func isMediaMessage(msg *waProto.Message) bool {
+	msgType := getMessageType(msg)
+	if msgType == constants.MessageImage ||
+		msgType == constants.MessageAudio ||
+		msgType == constants.MessageVideo ||
+		msgType == constants.MessageDocument {
+		return true
+	}
+
+	return false
+}
+
 func getMessageType(msg *waProto.Message) constants.Message {
 	switch {
 	case msg.GetConversation() != "":
@@ -18,26 +32,88 @@ func getMessageType(msg *waProto.Message) constants.Message {
 		return constants.MessageVideo
 	case msg.GetDocumentMessage() != nil:
 		return constants.MessageDocument
+	case msg.GetAudioMessage() != nil:
+		return constants.MessageAudio
+	case msg.GetLocationMessage() != nil:
+		return constants.MessageLocation
+	case msg.GetContactMessage() != nil:
+		return constants.MessageContact
+	case msg.GetPollCreationMessage() != nil:
+		return constants.MessagePoll
 	default:
-		return constants.MessageText // Default to text message
+		return constants.MessageUnknown
 	}
 }
 
 func extractText(msg *waProto.Message) string {
-	switch {
-	case msg.GetConversation() != "":
+	switch getMessageType(msg) {
+	case constants.MessageText:
 		return msg.GetConversation()
-	case msg.GetExtendedTextMessage() != nil:
+	case constants.MessageExtendedText:
 		return msg.GetExtendedTextMessage().GetText()
-	case msg.GetImageMessage() != nil:
-		caption := msg.GetImageMessage().GetCaption()
-		return caption
-	case msg.GetVideoMessage() != nil:
-		caption := msg.GetVideoMessage().GetCaption()
-		return caption
-	case msg.GetDocumentMessage() != nil:
-		caption := msg.GetDocumentMessage().GetCaption()
-		return caption
+	case constants.MessageImage:
+		return msg.GetImageMessage().GetCaption()
+	case constants.MessageVideo:
+		return msg.GetVideoMessage().GetCaption()
+	case constants.MessageDocument:
+		return msg.GetDocumentMessage().GetCaption()
+	case constants.MessageAudio:
+		return ""
+	case constants.MessageLocation:
+		loc := msg.GetLocationMessage()
+		return loc.GetName() + " (" + loc.GetAddress() + ")"
+	case constants.MessageContact:
+		return msg.GetContactMessage().GetDisplayName()
+	case constants.MessagePoll:
+		return msg.GetPollCreationMessage().GetName()
+	default:
+		return ""
+	}
+}
+
+func getQuotedMessageAndType(msg *waProto.Message) (*waProto.Message, constants.Message, error) {
+	if msg == nil || msg.GetExtendedTextMessage() == nil || msg.GetExtendedTextMessage().GetContextInfo() == nil {
+		return nil, constants.MessageText, errors.New("failed to get quoted message")
+	}
+
+	quoted := msg.GetExtendedTextMessage().GetContextInfo().GetQuotedMessage()
+	if quoted == nil {
+		return nil, constants.MessageText, errors.New("failed to get quoted message")
+	}
+
+	return quoted, getMessageType(quoted), nil
+}
+
+func extractQuotedText(msg *waProto.Message) string {
+	if msg == nil || msg.GetExtendedTextMessage() == nil || msg.GetExtendedTextMessage().GetContextInfo() == nil {
+		return ""
+	}
+
+	quoted := msg.GetExtendedTextMessage().GetContextInfo().GetQuotedMessage()
+	if quoted == nil {
+		return ""
+	}
+
+	switch {
+	case quoted.GetConversation() != "":
+		return quoted.GetConversation()
+	case quoted.GetExtendedTextMessage() != nil:
+		return quoted.GetExtendedTextMessage().GetText()
+	case quoted.GetImageMessage() != nil:
+		return quoted.GetImageMessage().GetCaption()
+	case quoted.GetVideoMessage() != nil:
+		return quoted.GetVideoMessage().GetCaption()
+	case quoted.GetDocumentMessage() != nil:
+		return quoted.GetDocumentMessage().GetCaption()
+	case quoted.GetAudioMessage() != nil:
+		return ""
+	case quoted.GetLocationMessage() != nil:
+		loc := quoted.GetLocationMessage()
+		return "Location: " + loc.GetName() + " (" + loc.GetAddress() + ")"
+	case quoted.GetContactMessage() != nil:
+		return "Contact: " + quoted.GetContactMessage().GetDisplayName()
+	case quoted.GetPollCreationMessage() != nil:
+		return "Poll: " + quoted.GetPollCreationMessage().GetName()
 	default:
 		return ""
 	}

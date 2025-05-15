@@ -11,29 +11,14 @@ import (
 	"go.mau.fi/whatsmeow/types"
 )
 
-// Update the handler function to handle all media types
-func (h *WhatsMeowEventHandler) handleMediaCaption(msg *waProto.Message, msgInfo types.MessageInfo) bool {
-	// Extract caption based on media type
-	var caption string
-	var mediaType string
-
-	if msg.GetImageMessage() != nil && msg.GetImageMessage().GetCaption() != "" {
-		caption = msg.GetImageMessage().GetCaption()
-		mediaType = "image"
-	} else if msg.GetVideoMessage() != nil && msg.GetVideoMessage().GetCaption() != "" {
-		caption = msg.GetVideoMessage().GetCaption()
-		mediaType = "video"
-	} else if msg.GetDocumentMessage() != nil && msg.GetDocumentMessage().GetCaption() != "" {
-		caption = msg.GetDocumentMessage().GetCaption()
-		mediaType = "document"
-	} else {
+func (h *WhatsMeowEventHandler) handleMediaCaptionTranslation(msg *waProto.Message, msgInfo types.MessageInfo) bool {
+	// check if its a media message
+	if !isMediaMessage(msg) {
 		return false
 	}
 
-	fmt.Printf("Processing %s caption: %s\n", mediaType, caption)
-
-	// Check if caption starts with a language code
-	if !strings.HasPrefix(caption, "/") {
+	caption := extractText(msg)
+	if caption == "" || !strings.HasPrefix(caption, "/") {
 		return false
 	}
 
@@ -50,127 +35,90 @@ func (h *WhatsMeowEventHandler) handleMediaCaption(msg *waProto.Message, msgInfo
 		return false
 	}
 
-	mediaCaption := parts[1]
-	detectedLang, ok := h.detector.DetectLanguage(mediaCaption)
+	textToTranslate := parts[1]
+	detectedLang, ok := h.detector.DetectLanguage(textToTranslate)
 	if !ok {
-		fmt.Printf("%s language detection failed:\n", mediaType)
+		fmt.Printf("language detection failed:\n")
 		return false
 	}
 
-	translated, err := h.translator.TranslateText(mediaCaption, detectedLang, targetLang)
+	translated, err := h.translator.TranslateText(textToTranslate, detectedLang, targetLang)
 	if err != nil {
-		fmt.Printf("%s caption translation failed: %v\n", mediaType, err)
+		fmt.Printf("caption translation failed: %v\n", err)
 		return false
 	}
 
 	if msgInfo.IsFromMe {
-		// If it's our own message, edit the media caption
 		if err := h.editMessageContent(msgInfo.Chat, msgInfo.ID, translated, msg); err != nil {
-			fmt.Printf("%s caption edit failed: %v\n", mediaType, err)
-			// Fall back to replying with the translation
-			h.sendResponse(msgInfo, translated)
+			fmt.Printf("caption edit failed: %v\n", err)
+			h.SendResponse(msgInfo, translated)
 		}
 	} else {
-		// If it's someone else's message, reply with the translated caption
-		h.sendResponse(msgInfo, translated)
+		h.SendResponse(msgInfo, translated)
 	}
 
 	return true
 }
 
 func (h *WhatsMeowEventHandler) handleQuotedMessageTranslation(msg *waProto.Message, text string, msgInfo types.MessageInfo) bool {
-	// Check if message is of form "/<lang>" and is replying to another
-	if !strings.HasPrefix(text, "/") || msg.GetExtendedTextMessage() == nil || msg.GetExtendedTextMessage().GetContextInfo() == nil {
+	if !strings.HasPrefix(text, "/") {
 		return false
 	}
 
-	// For quoted messages, the command is usually just "/en" with no space
+	parts := strings.SplitN(text, " ", 2)
+	if len(parts) > 1 {
+		fmt.Printf("Inline translation command \"%s\": %s\n", parts[0], text)
+		return false
+	}
+
 	langCode := strings.TrimPrefix(text, "/")
-	// Check if there's a space - if so, it's not a pure language code
-	if strings.Contains(langCode, " ") {
-		fmt.Printf("Inline translation command \"%s\": %s\n", langCode, text)
-		return false
-	}
-
 	targetLang := utils.GetLangByCode(langCode)
 	if targetLang == lingua.Unknown {
 		fmt.Printf("Not a valid language code \"%s\" in quoted message - ignoring\n", langCode)
 		return false
 	}
 
-	// Extract quoted message
-	quoted := msg.GetExtendedTextMessage().GetContextInfo().GetQuotedMessage()
-	if quoted == nil {
-		fmt.Println("No quoted message found.")
+	quotedMsg, msgType, err := getQuotedMessageAndType(msg)
+	if err != nil {
+		fmt.Println("Quoted message not found or invalid:", err)
 		return true
 	}
 
-	// Get information about the quoted message
-	quotedMsgID := ""
-	quotedSender := ""
-	if msg.GetExtendedTextMessage().GetContextInfo().GetStanzaID() != "" {
-		quotedMsgID = msg.GetExtendedTextMessage().GetContextInfo().GetStanzaID()
-	}
-	if msg.GetExtendedTextMessage().GetContextInfo().GetParticipant() != "" {
-		quotedSender = msg.GetExtendedTextMessage().GetContextInfo().GetParticipant()
-		fmt.Println("Quoted message sender:", quotedSender)
-	}
-
-	// Check if the quoted message is a media message
-	isMedia := isMediaMessage(quoted)
-	mediaType := ""
-
-	if quoted.GetImageMessage() != nil {
-		fmt.Println("Quoted message is an image with caption:", quoted.GetImageMessage().GetCaption())
-		mediaType = "image"
-	} else if quoted.GetVideoMessage() != nil {
-		fmt.Println("Quoted message is a video with caption:", quoted.GetVideoMessage().GetCaption())
-		mediaType = "video"
-	} else if quoted.GetDocumentMessage() != nil {
-		fmt.Println("Quoted message is a document with caption:", quoted.GetDocumentMessage().GetCaption())
-		mediaType = "document"
-	} else if quoted.GetAudioMessage() != nil {
-		fmt.Println("Quoted message is an audio message")
-		mediaType = "audio"
-	}
-
-	quotedText := extractText(quoted)
+	quotedText := extractText(quotedMsg)
 	if quotedText == "" {
 		fmt.Println("Quoted message has no translatable text.")
 		return true
 	}
 
-	// Detect the language first
 	detectedLang, ok := h.detector.DetectLanguage(quotedText)
 	if !ok {
 		fmt.Println("Could not detect source language.")
 		return false
 	}
 
-	// Then translate with the detected language
 	translated, err := h.translator.TranslateText(quotedText, detectedLang, targetLang)
 	if err != nil {
 		fmt.Println("Translation error:", err)
 		return false
 	}
 
+	quotedMsgID := msg.GetExtendedTextMessage().GetContextInfo().GetStanzaID()
+
+	isMedia := isMediaMessage(msg)
+
 	if msgInfo.IsFromMe && isMedia && quotedMsgID != "" {
-		// Try to edit the caption if it's our own media
-		fmt.Printf("Attempting to edit %s caption\n", mediaType)
-		if err := h.editMessageContent(msgInfo.Chat, quotedMsgID, translated, quoted); err != nil {
-			fmt.Printf("Quoted %s caption edit failed: %v\n", mediaType, err)
-			// Fall back to editing the original message
+		fmt.Printf("Attempting to edit %s caption\n", msgType)
+		if err := h.editMessageContent(msgInfo.Chat, quotedMsgID, translated, quotedMsg); err != nil {
+			fmt.Printf("Quoted %s caption edit failed: %v\n", msgType, err)
 			if err := h.editMessageContent(msgInfo.Chat, msgInfo.ID, translated, nil); err != nil {
-				fmt.Println("Edit failed:", err)
+				fmt.Println("Edit fallback failed:", err)
 			}
 		}
 	} else if msgInfo.IsFromMe {
-		// For regular text messages we own
 		if err := h.editMessageContent(msgInfo.Chat, msgInfo.ID, translated, nil); err != nil {
 			fmt.Println("Edit failed:", err)
 		}
 	} else {
-		// For messages from others, we quote their message
 		if err := h.sendReplyMessage(msgInfo.Chat, translated, msgInfo.ID); err != nil {
 			fmt.Println("Reply failed:", err)
 		}
@@ -179,8 +127,7 @@ func (h *WhatsMeowEventHandler) handleQuotedMessageTranslation(msg *waProto.Mess
 	return true
 }
 
-func (h *WhatsMeowEventHandler) handleDirectTranslation(text string, msgInfo types.MessageInfo) bool {
-	// Check if the message starts with "/"
+func (h *WhatsMeowEventHandler) handleInlineTranslation(text string, msgInfo types.MessageInfo) bool {
 	if !strings.HasPrefix(text, "/") {
 		return false
 	}
@@ -200,42 +147,33 @@ func (h *WhatsMeowEventHandler) handleDirectTranslation(text string, msgInfo typ
 
 	textToTranslate := parts[1]
 
-	// Detect the language first
 	detectedLang, ok := h.detector.DetectLanguage(textToTranslate)
 	if !ok {
 		fmt.Println("Could not detect source language.")
 		return false
 	}
 
-	// Then translate with the detected language
 	translated, err := h.translator.TranslateText(textToTranslate, detectedLang, targetLang)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Translation failed:", err)
 		return false
 	}
 
-	// For direct translation, we're translating the command message's text
-	// So we use the regular sendResponse
-	h.sendResponse(msgInfo, translated)
+	h.SendResponse(msgInfo, translated)
 	return true
 }
 
 func (h *WhatsMeowEventHandler) handleTranslation(msg *waProto.Message, text string, msgInfo types.MessageInfo) bool {
 	switch getMessageType(msg) {
 	case constants.MessageImage, constants.MessageVideo, constants.MessageDocument:
-		// First check if it's a media message with a caption that needs translation
-		if h.handleMediaCaption(msg, msgInfo) {
+		if h.handleMediaCaptionTranslation(msg, msgInfo) {
 			return true
 		}
-	default:
-		// Try to handle as a quoted message translation
-		if h.handleQuotedMessageTranslation(msg, text, msgInfo) {
-			return true
-		}
-
-		// if all fails, try direct translation
-		return h.handleDirectTranslation(text, msgInfo)
 	}
 
-	return false
+	if h.handleQuotedMessageTranslation(msg, text, msgInfo) {
+		return true
+	}
+
+	return h.handleInlineTranslation(text, msgInfo)
 }

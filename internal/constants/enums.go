@@ -1,5 +1,6 @@
 package constants
 
+//go:generate stringer -type Message -trimprefix Message
 type Message int
 
 const (
@@ -8,4 +9,9 @@ const (
 	MessageImage
 	MessageVideo
 	MessageDocument
+	MessageAudio
+	MessageLocation
+	MessageContact
+	MessagePoll
+	MessageUnknown
 )

@@ -50,14 +50,6 @@ func (h *WhatsMeowEventHandler) sendReplyMessage(chatJID types.JID, replyText st
 	return nil
 }
 
-// Function to check if a message is a media message
-func isMediaMessage(msg *waProto.Message) bool {
-	return msg.GetImageMessage() != nil ||
-		msg.GetVideoMessage() != nil ||
-		msg.GetDocumentMessage() != nil ||
-		msg.GetAudioMessage() != nil
-}
-
 // editMessageContent edits any type of message content (text or media caption)
 func (h *WhatsMeowEventHandler) editMessageContent(chatJID types.JID, messageID string, newContent string, originalMsg *waProto.Message) error {
 	var msg *waProto.Message
@@ -139,7 +131,7 @@ func (h *WhatsMeowEventHandler) editMessageContent(chatJID types.JID, messageID 
 	return nil
 }
 
-func (h *WhatsMeowEventHandler) sendResponse(msgInfo types.MessageInfo, response string) {
+func (h *WhatsMeowEventHandler) SendResponse(msgInfo types.MessageInfo, response string) {
 	fmt.Printf("Sending response to %s (isFromMe: %v, ID: %s)\n",
 		msgInfo.Chat.String(), msgInfo.IsFromMe, msgInfo.ID)
 
