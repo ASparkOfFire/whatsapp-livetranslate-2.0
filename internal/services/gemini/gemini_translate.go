@@ -25,12 +25,12 @@ type geminiTranslateService struct {
 
 func NewGeminiTranslateService(geminiAPIKey string) services.TranslateService {
 	client := &http.Client{
-		Timeout: time.Second * 3,
+		Timeout: time.Second * 10,
 	}
 
 	return &geminiTranslateService{
 		client:             client,
-		modelID:            "gemini-1.5-flash-8b",
+		modelID:            "gemini-2.0-flash",
 		generateContentAPI: "streamGenerateContent",
 		geminiAPIKey:       geminiAPIKey,
 		maxRetries:         3,
