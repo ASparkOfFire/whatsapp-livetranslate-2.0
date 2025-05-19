@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,6 +30,14 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 
 	cmd := strings.TrimPrefix(parts[0], "/")
 	switch cmd {
+	case "randmoji":
+		if msgInfo.IsFromMe {
+			duration, _ := strconv.Atoi(parts[1])
+			if duration == 0 {
+				duration = 3
+			}
+			randomEmoji(h, msgInfo, duration)
+		}
 	case "ping":
 		if msgInfo.IsFromMe {
 			h.SendResponse(msgInfo, fmt.Sprintf("Pong: %s", time.Since(start).String()))
