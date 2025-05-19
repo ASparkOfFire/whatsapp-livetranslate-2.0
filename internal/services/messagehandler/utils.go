@@ -121,9 +121,9 @@ func extractQuotedText(msg *waProto.Message) string {
 }
 
 func getSupportedLanguages() string {
-	supportedLangsString := "Supported Languages:"
+	supportedLangsString := "Supported Languages:\n"
 	for code, lang := range constants.SupportedLanguages {
-		supportedLangsString = fmt.Sprintf("\n`%s` - %s", code, lang.String())
+		supportedLangsString += fmt.Sprintf("\n`%s` - %s", code, lang.String())
 	}
 	return supportedLangsString
 }
