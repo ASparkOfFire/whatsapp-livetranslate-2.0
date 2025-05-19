@@ -30,6 +30,10 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 
 	cmd := strings.TrimPrefix(parts[0], "/")
 	switch cmd {
+	case "help":
+		h.SendResponse(msgInfo, HelpMessage)
+	case "supportedlangs":
+		h.SendResponse(msgInfo, getSupportedLanguages())
 	case "randmoji":
 		if msgInfo.IsFromMe {
 			duration := 10 // default duration
@@ -44,14 +48,7 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 		}
 	case "haha":
 		if msgInfo.IsFromMe {
-			duration := 10 // default duration
-
-			if len(parts) > 1 {
-				if d, err := strconv.Atoi(parts[1]); err == nil && d > 0 && d <= 10 {
-					duration = d
-				}
-			}
-
+			duration := 3 // default duration
 			go haha(h, msgInfo, duration)
 		}
 	case "ping":

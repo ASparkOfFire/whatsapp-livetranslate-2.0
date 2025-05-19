@@ -2,6 +2,7 @@ package messagehandler
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 	waProto "go.mau.fi/whatsmeow/proto/waE2E"
@@ -118,3 +119,13 @@ func extractQuotedText(msg *waProto.Message) string {
 		return ""
 	}
 }
+
+func getSupportedLanguages() string {
+	supportedLangsString := "Supported Languages:"
+	for code, lang := range constants.SupportedLanguages {
+		supportedLangsString = fmt.Sprintf("\n`%s` - %s", code, lang.String())
+	}
+	return supportedLangsString
+}
+
+const HelpMessage string = "WhatsApp Live Translation and Meme bot by Kabir Kalsi (https://github.com/ASparkOfFire)\n\nAvailable Commands:\n\n`/<lang code>` - Translate from one language to another, works inline and in reply to other message.\n`/help` - Display this message.\n`/ping` - For healthcheck.\n`/randmoji` - Spams a random emoji that keeps changing for specified duration.\n`/haha` - Spams laughing emoji and later removes it one by one."
