@@ -18,7 +18,7 @@ import (
 )
 
 func main() {
-	container, err := sqlstore.New("sqlite3", "file:auth.db?_foreign_keys=on", nil)
+	container, err := sqlstore.New("sqlite3", "file:/data/auth.db?_foreign_keys=on", nil)
 	if err != nil {
 		log.Fatalf("error while opening a database connection: %v\n", err)
 		return

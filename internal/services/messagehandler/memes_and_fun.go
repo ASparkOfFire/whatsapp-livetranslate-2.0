@@ -1,42 +1,35 @@
 package messagehandler
 
 import (
+	"log"
 	"math/rand"
+	"sync/atomic"
 	"time"
 
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 	"go.mau.fi/whatsmeow/types"
 )
 
-// emojiRange represents a start and end of a Unicode range
-type emojiRange struct {
-	start, end rune
-}
-
-var emojiRanges = []emojiRange{
-	{0x1F600, 0x1F64F}, // Emoticons
-	{0x2600, 0x26FF},   // Miscellaneous Symbols
-	{0x2700, 0x27BF},   // Dingbats
-	{0x1F680, 0x1F6FF}, // Transport and Map
-	{0x1F900, 0x1F9FF}, // Symbols and Pictographs Extended-A
-	{0x1F1E6, 0x1F1FF}, // Regional Indicator Symbols
-}
+var randmojiRunning int32 = 0
 
 func getRandomEmoji() string {
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	// Pick a random range
-	r := emojiRanges[rng.Intn(len(emojiRanges))]
-
-	// Pick a random rune within that range
-	codePoint := rng.Intn(int(r.end-r.start)+1) + int(r.start)
-
-	return string(rune(codePoint))
+	return constants.Emojis[rng.Intn(len(constants.Emojis))]
 }
 
 func randomEmoji(h *WhatsMeowEventHandler, msgInfo types.MessageInfo, duration int) {
+	// Try to set the flag from 0 to 1
+	if !atomic.CompareAndSwapInt32(&randmojiRunning, 0, 1) {
+		// Already running
+		h.editMessageContent(msgInfo.Chat, msgInfo.ID, "Already Running", nil)
+		return
+	}
+	defer atomic.StoreInt32(&randmojiRunning, 0)
+
+	log.Printf("invoking randmoji routine with duration: %d seconds\n", duration)
 	start := time.Now()
 	for {
-		if time.Since(start) > time.Duration(duration) {
+		if time.Since(start) > time.Duration(duration)*time.Second {
 			return
 		}
 		time.Sleep(time.Millisecond * 500)

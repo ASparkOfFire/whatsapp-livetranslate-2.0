@@ -32,11 +32,15 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 	switch cmd {
 	case "randmoji":
 		if msgInfo.IsFromMe {
-			duration, _ := strconv.Atoi(parts[1])
-			if duration == 0 {
-				duration = 3
+			duration := 10 // default duration
+
+			if len(parts) > 1 {
+				if d, err := strconv.Atoi(parts[1]); err == nil && d > 0 && d <= 10 {
+					duration = d
+				}
 			}
-			randomEmoji(h, msgInfo, duration)
+
+			go randomEmoji(h, msgInfo, duration)
 		}
 	case "ping":
 		if msgInfo.IsFromMe {
