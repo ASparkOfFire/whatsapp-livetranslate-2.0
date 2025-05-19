@@ -42,6 +42,18 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 
 			go randomEmoji(h, msgInfo, duration)
 		}
+	case "haha":
+		if msgInfo.IsFromMe {
+			duration := 10 // default duration
+
+			if len(parts) > 1 {
+				if d, err := strconv.Atoi(parts[1]); err == nil && d > 0 && d <= 10 {
+					duration = d
+				}
+			}
+
+			go haha(h, msgInfo, duration)
+		}
 	case "ping":
 		if msgInfo.IsFromMe {
 			h.SendResponse(msgInfo, fmt.Sprintf("Pong: %s", time.Since(start).String()))
