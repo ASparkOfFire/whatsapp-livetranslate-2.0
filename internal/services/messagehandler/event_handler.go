@@ -70,6 +70,25 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 		}
 	case "getmodel":
 		h.SendResponse(msgInfo, fmt.Sprintf("Current translation model: %s", h.translator.GetModel()))
+	case "settemp":
+		if msgInfo.IsFromMe {
+			if len(parts) < 2 {
+				h.SendResponse(msgInfo, "Please specify a temperature value between 0.0 and 1.0")
+				return
+			}
+			temp, err := strconv.ParseFloat(parts[1], 64)
+			if err != nil {
+				h.SendResponse(msgInfo, "Invalid temperature value. Please provide a number between 0.0 and 1.0")
+				return
+			}
+			if err := h.translator.SetTemperature(temp); err != nil {
+				h.SendResponse(msgInfo, fmt.Sprintf("Error setting temperature: %v", err))
+				return
+			}
+			h.SendResponse(msgInfo, fmt.Sprintf("Successfully set temperature to: %.1f", temp))
+		}
+	case "gettemp":
+		h.SendResponse(msgInfo, fmt.Sprintf("Current temperature: %.1f", h.translator.GetTemperature()))
 	default:
 		if len(cmd) == 2 { // it is a two digits language code.
 			if _, ok := constants.SupportedLanguages[cmd]; !ok {

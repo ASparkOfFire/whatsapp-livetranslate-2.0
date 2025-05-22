@@ -22,6 +22,7 @@ type geminiTranslateService struct {
 	maxRetries         int
 	initialBackoff     time.Duration
 	maxBackoff         time.Duration
+	temperature        float64
 }
 
 func NewGeminiTranslateService(geminiAPIKey string) services.TranslateService {
@@ -37,6 +38,7 @@ func NewGeminiTranslateService(geminiAPIKey string) services.TranslateService {
 		maxRetries:         3,
 		initialBackoff:     500 * time.Millisecond,
 		maxBackoff:         5 * time.Second,
+		temperature:        constants.DefaultTemperature,
 	}
 }
 
@@ -153,4 +155,16 @@ func (g *geminiTranslateService) SetModel(modelID string) error {
 
 func (g *geminiTranslateService) GetModel() string {
 	return string(g.modelID)
+}
+
+func (g *geminiTranslateService) SetTemperature(temp float64) error {
+	if temp < constants.MinTemperature || temp > constants.MaxTemperature {
+		return fmt.Errorf("temperature must be between %.1f and %.1f", constants.MinTemperature, constants.MaxTemperature)
+	}
+	g.temperature = temp
+	return nil
+}
+
+func (g *geminiTranslateService) GetTemperature() float64 {
+	return g.temperature
 }
