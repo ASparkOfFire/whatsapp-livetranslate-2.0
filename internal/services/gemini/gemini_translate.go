@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
 	gemini "github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/gemini/schemas"
 	"github.com/pemistahl/lingua-go"
@@ -15,7 +16,7 @@ import (
 
 type geminiTranslateService struct {
 	client             *http.Client
-	modelID            string
+	modelID            constants.GeminiModel
 	generateContentAPI string
 	geminiAPIKey       string
 	maxRetries         int
@@ -30,7 +31,7 @@ func NewGeminiTranslateService(geminiAPIKey string) services.TranslateService {
 
 	return &geminiTranslateService{
 		client:             client,
-		modelID:            "gemini-2.0-flash",
+		modelID:            constants.GeminiModel20Flash,
 		generateContentAPI: "streamGenerateContent",
 		geminiAPIKey:       geminiAPIKey,
 		maxRetries:         3,
@@ -137,20 +138,19 @@ func (g *geminiTranslateService) executeTranslation(text string, sourceLang ling
 }
 
 func (g *geminiTranslateService) SetModel(modelID string) error {
-	validModels := map[string]bool{
-		"gemini-1.5-flash": true,
-		"gemini-2.0-flash": true,
-		"gemini-2.5-flash": true,
+	model := constants.GeminiModel(modelID)
+	if !constants.ValidGeminiModels[model] {
+		return fmt.Errorf("invalid model ID: %s. Supported models are: %s, %s, %s",
+			modelID,
+			constants.GeminiModel15Flash,
+			constants.GeminiModel20Flash,
+			constants.GeminiModel25Flash)
 	}
 
-	if !validModels[modelID] {
-		return fmt.Errorf("invalid model ID: %s. Supported models are: gemini-1.5-flash, gemini-2.0-flash, gemini-2.5-flash", modelID)
-	}
-
-	g.modelID = modelID
+	g.modelID = model
 	return nil
 }
 
 func (g *geminiTranslateService) GetModel() string {
-	return g.modelID
+	return string(g.modelID)
 }
