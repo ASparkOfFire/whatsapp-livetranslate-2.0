@@ -68,6 +68,8 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 			}
 			h.SendResponse(msgInfo, fmt.Sprintf("Successfully set translation model to: %s", modelID))
 		}
+	case "getmodel":
+		h.SendResponse(msgInfo, fmt.Sprintf("Current translation model: %s", h.translator.GetModel()))
 	default:
 		if len(cmd) == 2 { // it is a two digits language code.
 			if _, ok := constants.SupportedLanguages[cmd]; !ok {

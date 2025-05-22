@@ -150,3 +150,7 @@ func (g *geminiTranslateService) SetModel(modelID string) error {
 	g.modelID = modelID
 	return nil
 }
+
+func (g *geminiTranslateService) GetModel() string {
+	return g.modelID
+}
