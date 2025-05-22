@@ -21,8 +21,6 @@ func getRandomEmoji() string {
 func randomEmoji(h *WhatsMeowEventHandler, msgInfo types.MessageInfo, times int) {
 	// Try to set the flag from 0 to 1
 	if !atomic.CompareAndSwapInt32(&memeRunning, 0, 1) {
-		// Already running
-		h.editMessageContent(msgInfo.Chat, msgInfo.ID, "Already Running", nil)
 		return
 	}
 	defer atomic.StoreInt32(&memeRunning, 0)
@@ -32,14 +30,13 @@ func randomEmoji(h *WhatsMeowEventHandler, msgInfo types.MessageInfo, times int)
 	for range times {
 		for range 3 {
 			time.Sleep(time.Millisecond * 500)
-			h.editMessageContent(msgInfo.Chat, msgInfo.ID, getRandomEmoji(), nil)
+			h.editMessageContent(msgInfo.Chat, msgInfo.ID, fmt.Sprintf("```%s```", getRandomEmoji()), nil)
 		}
 	}
 }
 
 func haha(h *WhatsMeowEventHandler, msgInfo types.MessageInfo, times int) {
 	if !atomic.CompareAndSwapInt32(&memeRunning, 0, 1) {
-		h.editMessageContent(msgInfo.Chat, msgInfo.ID, "Already Running", nil)
 		return
 	}
 	defer atomic.StoreInt32(&memeRunning, 0)
@@ -51,12 +48,5 @@ func haha(h *WhatsMeowEventHandler, msgInfo types.MessageInfo, times int) {
 			time.Sleep(300 * time.Millisecond)
 			h.editMessageContent(msgInfo.Chat, msgInfo.ID, fmt.Sprintf("```%s```", hahaText), nil)
 		}
-	}
-
-	// Descend down to one emoji (length 1)
-	for len(hahaText) > 1 {
-		hahaText = hahaText[:len(hahaText)-1]
-		time.Sleep(150 * time.Millisecond) // Faster descending
-		h.editMessageContent(msgInfo.Chat, msgInfo.ID, fmt.Sprintf("```%s```", hahaText), nil)
 	}
 }

@@ -135,3 +135,18 @@ func (g *geminiTranslateService) executeTranslation(text string, sourceLang ling
 	// Return the translated output.
 	return output.Output, nil
 }
+
+func (g *geminiTranslateService) SetModel(modelID string) error {
+	validModels := map[string]bool{
+		"gemini-1.5-flash": true,
+		"gemini-2.0-flash": true,
+		"gemini-2.5-flash": true,
+	}
+
+	if !validModels[modelID] {
+		return fmt.Errorf("invalid model ID: %s. Supported models are: gemini-1.5-flash, gemini-2.0-flash, gemini-2.5-flash", modelID)
+	}
+
+	g.modelID = modelID
+	return nil
+}

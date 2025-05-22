@@ -6,4 +6,5 @@ import (
 
 type TranslateService interface {
 	TranslateText(text string, sourceLang lingua.Language, targetLang lingua.Language) (string, error)
+	SetModel(modelID string) error
 }

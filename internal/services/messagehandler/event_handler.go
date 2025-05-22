@@ -55,6 +55,19 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 		if msgInfo.IsFromMe {
 			h.SendResponse(msgInfo, fmt.Sprintf("Pong: %s", time.Since(start).String()))
 		}
+	case "setmodel":
+		if msgInfo.IsFromMe {
+			if len(parts) < 2 {
+				h.SendResponse(msgInfo, "Please specify a model ID. Supported models: gemini-1.5-flash, gemini-2.0-flash, gemini-2.5-flash")
+				return
+			}
+			modelID := parts[1]
+			if err := h.translator.SetModel(modelID); err != nil {
+				h.SendResponse(msgInfo, fmt.Sprintf("Error setting model: %v", err))
+				return
+			}
+			h.SendResponse(msgInfo, fmt.Sprintf("Successfully set translation model to: %s", modelID))
+		}
 	default:
 		if len(cmd) == 2 { // it is a two digits language code.
 			if _, ok := constants.SupportedLanguages[cmd]; !ok {
