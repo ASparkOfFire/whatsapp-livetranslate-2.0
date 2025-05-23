@@ -12,6 +12,7 @@ import (
 
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 	"github.com/mdp/qrterminal/v3"
+	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
 )
@@ -107,17 +108,26 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 		}
 		fmt.Printf("Successfully generated image (%d bytes)\n", len(imageBytes))
 
+		// Upload the image to WhatsApp
+		fmt.Printf("Uploading image to WhatsApp...\n")
+		uploaded, err := h.client.Upload(context.Background(), imageBytes, whatsmeow.MediaImage)
+		if err != nil {
+			fmt.Printf("Error uploading image: %v\n", err)
+			h.SendResponse(msgInfo, fmt.Sprintf("Error uploading image: %v", err))
+			return
+		}
+
 		// Send the image
 		msg := &waProto.Message{
 			ImageMessage: &waProto.ImageMessage{
 				Caption:       proto.String(prompt),
 				Mimetype:      proto.String("image/jpeg"),
-				URL:           proto.String(""),
-				DirectPath:    proto.String(""),
-				MediaKey:      []byte{},
-				FileEncSHA256: []byte{},
-				FileSHA256:    []byte{},
-				FileLength:    proto.Uint64(uint64(len(imageBytes))),
+				URL:           proto.String(uploaded.URL),
+				DirectPath:    proto.String(uploaded.DirectPath),
+				MediaKey:      uploaded.MediaKey,
+				FileEncSHA256: uploaded.FileEncSHA256,
+				FileSHA256:    uploaded.FileSHA256,
+				FileLength:    proto.Uint64(uploaded.FileLength),
 			},
 		}
 		fmt.Printf("Sending generated image to %s...\n", msgInfo.Chat)

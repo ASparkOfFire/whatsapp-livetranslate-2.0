@@ -149,15 +149,16 @@ func extractImageData(r io.Reader) (string, error) {
 	decoder := json.NewDecoder(r)
 	var imageData strings.Builder
 
-	for {
-		var event event
-		if err := decoder.Decode(&event); err != nil {
-			if err == io.EOF {
-				break
-			}
-			return "", fmt.Errorf("decode event: %w", err)
-		}
+	// First decode the array of events
+	var events []event
+	if err := decoder.Decode(&events); err != nil {
+		return "", fmt.Errorf("decode events array: %w", err)
+	}
 
+	fmt.Printf("Received %d events from API\n", len(events))
+
+	// Process each event in the array
+	for _, event := range events {
 		for _, cand := range event.Candidates {
 			for _, p := range cand.Content.Parts {
 				if p.InlineData != nil && p.InlineData.Data != "" {
