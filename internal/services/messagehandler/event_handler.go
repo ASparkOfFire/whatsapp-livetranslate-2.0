@@ -96,11 +96,17 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 			return
 		}
 		prompt := strings.Join(parts[1:], " ")
+		fmt.Printf("Received image generation request from %s with prompt: %s\n", msgInfo.Sender, prompt)
+
+		fmt.Println("Generating image using Gemini AI...")
 		imageBytes, err := h.imageGenerator.GenerateImage(context.Background(), prompt)
 		if err != nil {
+			fmt.Printf("Error generating image: %v\n", err)
 			h.SendResponse(msgInfo, fmt.Sprintf("Error generating image: %v", err))
 			return
 		}
+		fmt.Printf("Successfully generated image (%d bytes)\n", len(imageBytes))
+
 		// Send the image
 		msg := &waProto.Message{
 			ImageMessage: &waProto.ImageMessage{
@@ -114,11 +120,14 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 				FileLength:    proto.Uint64(uint64(len(imageBytes))),
 			},
 		}
+		fmt.Printf("Sending generated image to %s...\n", msgInfo.Chat)
 		_, err = h.client.SendMessage(context.Background(), msgInfo.Chat, msg)
 		if err != nil {
+			fmt.Printf("Error sending image: %v\n", err)
 			h.SendResponse(msgInfo, fmt.Sprintf("Error sending image: %v", err))
 			return
 		}
+		fmt.Printf("Successfully sent image to %s\n", msgInfo.Chat)
 	default:
 		if len(cmd) == 2 { // it is a two digits language code.
 			if _, ok := constants.SupportedLanguages[cmd]; !ok {

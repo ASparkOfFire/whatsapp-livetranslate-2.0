@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
@@ -76,6 +77,8 @@ func NewGeminiImageGenerator(model, apiKey string) services.ImageGenerator {
 
 // GenerateImage sends the prompt and returns decoded image bytes.
 func (g *geminiImageGenerator) GenerateImage(ctx context.Context, prompt string) ([]byte, error) {
+	fmt.Printf("Starting image generation with model %s\n", g.modelID)
+
 	// ---------- build request body ----------
 	payload := requestPayload{
 		Contents: []map[string]any{
@@ -100,6 +103,7 @@ func (g *geminiImageGenerator) GenerateImage(ctx context.Context, prompt string)
 	// ---------- HTTP request ----------
 	url := fmt.Sprintf("%s/%s:%s?key=%s",
 		g.geminiAPIBaseURL, g.modelID, g.generateContentAPI, g.apiKey)
+	fmt.Printf("Sending request to %s\n", url)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
@@ -118,17 +122,21 @@ func (g *geminiImageGenerator) GenerateImage(ctx context.Context, prompt string)
 		return nil, fmt.Errorf("API error (%d): %s", resp.StatusCode, string(respBuf))
 	}
 
+	fmt.Println("Received response from Gemini API, extracting image data...")
+
 	// ---------- stream & extract image ----------
 	imageData, err := extractImageData(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("extract image data: %w", err)
 	}
 
+	fmt.Println("Successfully extracted image data, decoding base64...")
 	decoded, err := base64.StdEncoding.DecodeString(imageData)
 	if err != nil {
 		return nil, fmt.Errorf("base64-decode image: %w", err)
 	}
 
+	fmt.Printf("Successfully decoded image (%d bytes)\n", len(decoded))
 	return decoded, nil
 }
 
@@ -138,20 +146,34 @@ func (g *geminiImageGenerator) GenerateImage(ctx context.Context, prompt string)
 
 // extractImageData reads the JSON stream and returns the first inlineData.data.
 func extractImageData(r io.Reader) (string, error) {
-	var events []event
-	if err := json.NewDecoder(r).Decode(&events); err != nil {
-		return "", fmt.Errorf("decode events array: %w", err)
-	}
+	decoder := json.NewDecoder(r)
+	var imageData strings.Builder
 
-	for _, ev := range events {
-		for _, cand := range ev.Candidates {
+	for {
+		var event event
+		if err := decoder.Decode(&event); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", fmt.Errorf("decode event: %w", err)
+		}
+
+		for _, cand := range event.Candidates {
 			for _, p := range cand.Content.Parts {
 				if p.InlineData != nil && p.InlineData.Data != "" {
-					return p.InlineData.Data, nil
+					// Append the data chunk
+					imageData.WriteString(p.InlineData.Data)
+					fmt.Printf("Received image data chunk (%d bytes)\n", len(p.InlineData.Data))
 				}
 			}
 		}
 	}
 
-	return "", errors.New("no inlineData.data found in response")
+	finalData := imageData.String()
+	if finalData == "" {
+		return "", errors.New("no inlineData.data found in response")
+	}
+
+	fmt.Printf("Total image data size: %d bytes\n", len(finalData))
+	return finalData, nil
 }
