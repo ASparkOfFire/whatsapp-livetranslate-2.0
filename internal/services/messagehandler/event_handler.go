@@ -92,52 +92,54 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 	case "gettemp":
 		h.SendResponse(msgInfo, fmt.Sprintf("Current temperature: %.1f", h.translator.GetTemperature()))
 	case "image":
-		if len(parts) < 2 {
-			h.SendResponse(msgInfo, "Please provide a prompt for image generation. Example: /image a beautiful sunset over mountains")
-			return
-		}
-		prompt := strings.Join(parts[1:], " ")
-		fmt.Printf("Received image generation request from %s with prompt: %s\n", msgInfo.Sender, prompt)
+		if msgInfo.IsFromMe {
+			if len(parts) < 2 {
+				h.SendResponse(msgInfo, "Please provide a prompt for image generation. Example: /image a beautiful sunset over mountains")
+				return
+			}
+			prompt := strings.Join(parts[1:], " ")
+			fmt.Printf("Received image generation request from %s with prompt: %s\n", msgInfo.Sender, prompt)
 
-		fmt.Println("Generating image using Gemini AI...")
-		imageBytes, err := h.imageGenerator.GenerateImage(context.Background(), prompt)
-		if err != nil {
-			fmt.Printf("Error generating image: %v\n", err)
-			h.SendResponse(msgInfo, fmt.Sprintf("Error generating image: %v", err))
-			return
-		}
-		fmt.Printf("Successfully generated image (%d bytes)\n", len(imageBytes))
+			fmt.Println("Generating image using Gemini AI...")
+			imageBytes, err := h.imageGenerator.GenerateImage(context.Background(), prompt)
+			if err != nil {
+				fmt.Printf("Error generating image: %v\n", err)
+				h.SendResponse(msgInfo, fmt.Sprintf("Error generating image: %v", err))
+				return
+			}
+			fmt.Printf("Successfully generated image (%d bytes)\n", len(imageBytes))
 
-		// Upload the image to WhatsApp
-		fmt.Printf("Uploading image to WhatsApp...\n")
-		uploaded, err := h.client.Upload(context.Background(), imageBytes, whatsmeow.MediaImage)
-		if err != nil {
-			fmt.Printf("Error uploading image: %v\n", err)
-			h.SendResponse(msgInfo, fmt.Sprintf("Error uploading image: %v", err))
-			return
-		}
+			// Upload the image to WhatsApp
+			fmt.Printf("Uploading image to WhatsApp...\n")
+			uploaded, err := h.client.Upload(context.Background(), imageBytes, whatsmeow.MediaImage)
+			if err != nil {
+				fmt.Printf("Error uploading image: %v\n", err)
+				h.SendResponse(msgInfo, fmt.Sprintf("Error uploading image: %v", err))
+				return
+			}
 
-		// Send the image
-		msg := &waProto.Message{
-			ImageMessage: &waProto.ImageMessage{
-				Caption:       proto.String(prompt),
-				Mimetype:      proto.String("image/jpeg"),
-				URL:           proto.String(uploaded.URL),
-				DirectPath:    proto.String(uploaded.DirectPath),
-				MediaKey:      uploaded.MediaKey,
-				FileEncSHA256: uploaded.FileEncSHA256,
-				FileSHA256:    uploaded.FileSHA256,
-				FileLength:    proto.Uint64(uploaded.FileLength),
-			},
+			// Send the image
+			msg := &waProto.Message{
+				ImageMessage: &waProto.ImageMessage{
+					Caption:       proto.String(prompt),
+					Mimetype:      proto.String("image/jpeg"),
+					URL:           proto.String(uploaded.URL),
+					DirectPath:    proto.String(uploaded.DirectPath),
+					MediaKey:      uploaded.MediaKey,
+					FileEncSHA256: uploaded.FileEncSHA256,
+					FileSHA256:    uploaded.FileSHA256,
+					FileLength:    proto.Uint64(uploaded.FileLength),
+				},
+			}
+			fmt.Printf("Sending generated image to %s...\n", msgInfo.Chat)
+			_, err = h.client.SendMessage(context.Background(), msgInfo.Chat, msg)
+			if err != nil {
+				fmt.Printf("Error sending image: %v\n", err)
+				h.SendResponse(msgInfo, fmt.Sprintf("Error sending image: %v", err))
+				return
+			}
+			fmt.Printf("Successfully sent image to %s\n", msgInfo.Chat)
 		}
-		fmt.Printf("Sending generated image to %s...\n", msgInfo.Chat)
-		_, err = h.client.SendMessage(context.Background(), msgInfo.Chat, msg)
-		if err != nil {
-			fmt.Printf("Error sending image: %v\n", err)
-			h.SendResponse(msgInfo, fmt.Sprintf("Error sending image: %v", err))
-			return
-		}
-		fmt.Printf("Successfully sent image to %s\n", msgInfo.Chat)
 	default:
 		if len(cmd) == 2 { // it is a two digits language code.
 			if _, ok := constants.SupportedLanguages[cmd]; !ok {
