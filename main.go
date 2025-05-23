@@ -32,7 +32,7 @@ func main() {
 
 	client := whatsmeow.NewClient(deviceStore, nil)
 	translator := gemini.NewGeminiTranslateService(config.AppConfig.GeminiAPIKey)
-	imageGenerator := gemini.NewGeminiImageGenerator(string(constants.GeminiModel20Flash), config.AppConfig.GeminiAPIKey)
+	imageGenerator := gemini.NewGeminiImageGenerator(string(constants.GeminiModelImageGenerator), config.AppConfig.GeminiAPIKey)
 
 	// Initialize the language detector with supported languages
 	detector := services.NewLinguaLangDetectService(constants.SupportedLanguages)

@@ -13,6 +13,10 @@ const (
 	DefaultTemperature float64 = 0.2
 )
 
+const (
+	GeminiModelImageGenerator GeminiModel = "gemini-2.0-flash-preview-image-generation"
+)
+
 var ValidGeminiModels = map[GeminiModel]bool{
 	GeminiModel15Flash: true,
 	GeminiModel20Flash: true,
