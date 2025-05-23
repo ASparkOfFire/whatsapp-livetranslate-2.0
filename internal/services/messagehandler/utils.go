@@ -128,4 +128,21 @@ func getSupportedLanguages() string {
 	return supportedLangsString
 }
 
-const HelpMessage string = "WhatsApp Live Translation and Meme bot by Kabir Kalsi (https://github.com/ASparkOfFire)\n\nAvailable Commands:\n\n`/<lang code>` - Translate from one language to another, works inline and in reply to other message.\n`/supportedlangs` - List all the supported languages.\n`/help` - Display this message.\n`/ping` - For healthcheck.\n`/randmoji` - Spams a random emoji that keeps changing for specified duration.\n`/haha` - Spams laughing emoji and later removes it one by one.\n`/setmodel` - Set the translation model (" + string(constants.GeminiModel15Flash) + ", " + string(constants.GeminiModel20Flash) + ", " + string(constants.GeminiModel25Flash) + ").\n`/getmodel` - Show the currently active translation model.\n`/settemp` - Set the translation temperature (0.0 to 1.0).\n`/gettemp` - Show the current translation temperature."
+const HelpMessage string = `WhatsApp Live Translation and Meme bot by Kabir Kalsi (https://github.com/ASparkOfFire)
+
+Available Commands:
+
+/<lang code> - Translate from one language to another, works inline, quoted, and in media captions
+/help - Show this help message
+/supportedlangs - Show supported languages
+/randmoji [duration] - Send random emojis (duration 1-10, default 10)
+/haha - Send laughing emojis
+/ping - Check bot response time
+/setmodel [model] - Set translation model (gemini-1.5-flash, gemini-2.0-flash, gemini-2.5-flash)
+/getmodel - Get current translation model
+/settemp [value] - Set temperature (0.0-1.0)
+/gettemp - Get current temperature
+/image [prompt] - Generate an image using Gemini AI
+
+Example: /en Hello world
+Supported languages: en, ru, pa, hi`

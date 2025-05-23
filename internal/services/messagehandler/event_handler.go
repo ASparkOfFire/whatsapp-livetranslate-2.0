@@ -13,6 +13,7 @@ import (
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow/types"
+	"google.golang.org/protobuf/proto"
 )
 
 func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo types.MessageInfo) {
@@ -89,6 +90,35 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 		}
 	case "gettemp":
 		h.SendResponse(msgInfo, fmt.Sprintf("Current temperature: %.1f", h.translator.GetTemperature()))
+	case "image":
+		if len(parts) < 2 {
+			h.SendResponse(msgInfo, "Please provide a prompt for image generation. Example: /image a beautiful sunset over mountains")
+			return
+		}
+		prompt := strings.Join(parts[1:], " ")
+		imageBytes, err := h.imageGenerator.GenerateImage(context.Background(), prompt)
+		if err != nil {
+			h.SendResponse(msgInfo, fmt.Sprintf("Error generating image: %v", err))
+			return
+		}
+		// Send the image
+		msg := &waProto.Message{
+			ImageMessage: &waProto.ImageMessage{
+				Caption:       proto.String(prompt),
+				Mimetype:      proto.String("image/jpeg"),
+				URL:           proto.String(""),
+				DirectPath:    proto.String(""),
+				MediaKey:      []byte{},
+				FileEncSHA256: []byte{},
+				FileSHA256:    []byte{},
+				FileLength:    proto.Uint64(uint64(len(imageBytes))),
+			},
+		}
+		_, err = h.client.SendMessage(context.Background(), msgInfo.Chat, msg)
+		if err != nil {
+			h.SendResponse(msgInfo, fmt.Sprintf("Error sending image: %v", err))
+			return
+		}
 	default:
 		if len(cmd) == 2 { // it is a two digits language code.
 			if _, ok := constants.SupportedLanguages[cmd]; !ok {

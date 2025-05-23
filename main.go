@@ -32,12 +32,13 @@ func main() {
 
 	client := whatsmeow.NewClient(deviceStore, nil)
 	translator := gemini.NewGeminiTranslateService(config.AppConfig.GeminiAPIKey)
+	imageGenerator := gemini.NewGeminiImageGenerator(string(constants.GeminiModel20Flash), config.AppConfig.GeminiAPIKey)
 
 	// Initialize the language detector with supported languages
 	detector := services.NewLinguaLangDetectService(constants.SupportedLanguages)
 
 	// connect to the client and event handler
-	evtHandler, err := messagehandler.NewWhatsMeowEventHandler(client, detector, translator)
+	evtHandler, err := messagehandler.NewWhatsMeowEventHandler(client, detector, translator, imageGenerator)
 	if err != nil {
 		log.Fatalf("error while setting up the event handler: %v\n", err)
 		return

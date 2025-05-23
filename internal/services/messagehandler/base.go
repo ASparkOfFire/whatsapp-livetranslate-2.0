@@ -7,16 +7,18 @@ import (
 )
 
 type WhatsMeowEventHandler struct {
-	client     *whatsmeow.Client
-	detector   services.LangDetectService
-	translator services.TranslateService
+	client         *whatsmeow.Client
+	detector       services.LangDetectService
+	translator     services.TranslateService
+	imageGenerator services.ImageGenerator
 }
 
-func NewWhatsMeowEventHandler(client *whatsmeow.Client, detector services.LangDetectService, translator services.TranslateService) (*WhatsMeowEventHandler, error) {
+func NewWhatsMeowEventHandler(client *whatsmeow.Client, detector services.LangDetectService, translator services.TranslateService, imageGenerator services.ImageGenerator) (*WhatsMeowEventHandler, error) {
 	handler := &WhatsMeowEventHandler{
-		client:     client,
-		detector:   detector,
-		translator: translator,
+		client:         client,
+		detector:       detector,
+		translator:     translator,
+		imageGenerator: imageGenerator,
 	}
 	if handler.client.Store.ID == nil {
 		if err := handler.setupQRLogin(); err != nil {
