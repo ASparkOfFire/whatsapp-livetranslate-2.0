@@ -13,41 +13,11 @@ import (
 	waProto "go.mau.fi/whatsmeow/proto/waE2E"
 
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
-	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
-	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/memegenerator"
 	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
 )
-
-type WhatsMeowEventHandler struct {
-	client         *whatsmeow.Client
-	detector       services.LangDetectService
-	translator     services.TranslateService
-	imageGenerator services.ImageGenerator
-	memeGenerator  *memegenerator.MemeGenerator
-}
-
-func NewWhatsMeowEventHandler(client *whatsmeow.Client, detector services.LangDetectService, translator services.TranslateService, imageGenerator services.ImageGenerator) (*WhatsMeowEventHandler, error) {
-	handler := &WhatsMeowEventHandler{
-		client:         client,
-		detector:       detector,
-		translator:     translator,
-		imageGenerator: imageGenerator,
-		memeGenerator:  memegenerator.NewMemeGenerator(),
-	}
-	if handler.client.Store.ID == nil {
-		if err := handler.setupQRLogin(); err != nil {
-			return nil, err
-		}
-	} else {
-		if err := client.Connect(); err != nil {
-			return nil, err
-		}
-	}
-	return handler, nil
-}
 
 func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo types.MessageInfo) {
 	start := time.Now()
