@@ -2,6 +2,7 @@ package messagehandler
 
 import (
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/memegenerator"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types/events"
 )
@@ -11,6 +12,7 @@ type WhatsMeowEventHandler struct {
 	detector       services.LangDetectService
 	translator     services.TranslateService
 	imageGenerator services.ImageGenerator
+	memeGenerator  *memegenerator.MemeGenerator
 }
 
 func NewWhatsMeowEventHandler(client *whatsmeow.Client, detector services.LangDetectService, translator services.TranslateService, imageGenerator services.ImageGenerator) (*WhatsMeowEventHandler, error) {
@@ -19,6 +21,7 @@ func NewWhatsMeowEventHandler(client *whatsmeow.Client, detector services.LangDe
 		detector:       detector,
 		translator:     translator,
 		imageGenerator: imageGenerator,
+		memeGenerator:  memegenerator.NewMemeGenerator(),
 	}
 	if handler.client.Store.ID == nil {
 		if err := handler.setupQRLogin(); err != nil {

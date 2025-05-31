@@ -3,6 +3,8 @@ package messagehandler
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -11,11 +13,41 @@ import (
 	waProto "go.mau.fi/whatsmeow/proto/waE2E"
 
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/memegenerator"
 	"github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
 )
+
+type WhatsMeowEventHandler struct {
+	client         *whatsmeow.Client
+	detector       services.LangDetectService
+	translator     services.TranslateService
+	imageGenerator services.ImageGenerator
+	memeGenerator  *memegenerator.MemeGenerator
+}
+
+func NewWhatsMeowEventHandler(client *whatsmeow.Client, detector services.LangDetectService, translator services.TranslateService, imageGenerator services.ImageGenerator) (*WhatsMeowEventHandler, error) {
+	handler := &WhatsMeowEventHandler{
+		client:         client,
+		detector:       detector,
+		translator:     translator,
+		imageGenerator: imageGenerator,
+		memeGenerator:  memegenerator.NewMemeGenerator(),
+	}
+	if handler.client.Store.ID == nil {
+		if err := handler.setupQRLogin(); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := client.Connect(); err != nil {
+			return nil, err
+		}
+	}
+	return handler, nil
+}
 
 func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo types.MessageInfo) {
 	start := time.Now()
@@ -140,6 +172,77 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 			}
 			fmt.Printf("Successfully sent image to %s\n", msgInfo.Chat)
 		}
+	case "meme":
+		if msgInfo.IsFromMe {
+			var subreddit string
+			if len(parts) > 1 {
+				subreddit = parts[1]
+			}
+
+			fmt.Printf("Fetching random meme%s...\n", map[bool]string{true: fmt.Sprintf(" from r/%s", subreddit), false: ""}[subreddit != ""])
+			memeResp, err := h.memeGenerator.GetRandomMeme(context.Background(), subreddit)
+			if err != nil {
+				fmt.Printf("Error fetching meme: %v\n", err)
+				h.SendResponse(msgInfo, fmt.Sprintf("Error fetching meme: %v", err))
+				return
+			}
+
+			if len(memeResp.Memes) == 0 {
+				h.SendResponse(msgInfo, "No memes found")
+				return
+			}
+
+			meme := memeResp.Memes[0]
+			fmt.Printf("Found meme: %s from r/%s\n", meme.Title, meme.Subreddit)
+
+			// Download the meme image
+			resp, err := http.Get(meme.URL)
+			if err != nil {
+				fmt.Printf("Error downloading meme: %v\n", err)
+				h.SendResponse(msgInfo, fmt.Sprintf("Error downloading meme: %v", err))
+				return
+			}
+			defer resp.Body.Close()
+
+			imageBytes, err := io.ReadAll(resp.Body)
+			if err != nil {
+				fmt.Printf("Error reading meme data: %v\n", err)
+				h.SendResponse(msgInfo, fmt.Sprintf("Error reading meme data: %v", err))
+				return
+			}
+
+			// Upload the image to WhatsApp
+			fmt.Printf("Uploading meme to WhatsApp...\n")
+			uploaded, err := h.client.Upload(context.Background(), imageBytes, whatsmeow.MediaImage)
+			if err != nil {
+				fmt.Printf("Error uploading meme: %v\n", err)
+				h.SendResponse(msgInfo, fmt.Sprintf("Error uploading meme: %v", err))
+				return
+			}
+
+			// Send the meme
+			caption := fmt.Sprintf("r/%s: %s", meme.Subreddit, meme.Title)
+			msg := &waProto.Message{
+				ImageMessage: &waProto.ImageMessage{
+					Caption:       proto.String(caption),
+					Mimetype:      proto.String("image/jpeg"),
+					URL:           proto.String(uploaded.URL),
+					DirectPath:    proto.String(uploaded.DirectPath),
+					MediaKey:      uploaded.MediaKey,
+					FileEncSHA256: uploaded.FileEncSHA256,
+					FileSHA256:    uploaded.FileSHA256,
+					FileLength:    proto.Uint64(uploaded.FileLength),
+				},
+			}
+			fmt.Printf("Sending meme to %s...\n", msgInfo.Chat)
+			_, err = h.client.SendMessage(context.Background(), msgInfo.Chat, msg)
+			if err != nil {
+				fmt.Printf("Error sending meme: %v\n", err)
+				h.SendResponse(msgInfo, fmt.Sprintf("Error sending meme: %v", err))
+				return
+			}
+			fmt.Printf("Successfully sent meme to %s\n", msgInfo.Chat)
+		}
 	default:
 		if len(cmd) == 2 { // it is a two digits language code.
 			if _, ok := constants.SupportedLanguages[cmd]; !ok {
@@ -148,7 +251,6 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 			h.handleTranslation(msg, text, msgInfo)
 		}
 	}
-
 }
 
 func (h *WhatsMeowEventHandler) setupQRLogin() error {
