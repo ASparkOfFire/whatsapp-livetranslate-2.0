@@ -97,7 +97,49 @@ go build -o whatsapp-livetranslate .
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `GEMINI_KEY` | Google Gemini API key for AI features | Yes |
-| `COOKIES_PATH` | Path to cookies.txt for authenticated downloads | No |
+| `YOUTUBE_VISITOR_DATA` | YouTube visitor data for bypassing some restrictions | No |
+| `COOKIES_PATH` | Path to cookies.txt for non-YouTube sites (Instagram, Twitter, etc.) | No |
+
+### YouTube Visitor Data (Optional)
+
+To bypass some YouTube restrictions without using cookies:
+
+1. Open YouTube in your browser
+2. Open Developer Tools (F12)
+3. Go to Network tab
+4. Play any video
+5. Look for requests to `youtubei/v1/player` 
+6. In the request headers or payload, find `visitorData` value
+7. Set it as environment variable:
+   ```bash
+   export YOUTUBE_VISITOR_DATA="your_visitor_data_here"
+   ```
+
+This helps with:
+- Some geo-restricted content
+- Certain rate limits
+- Age-restricted videos (limited effectiveness)
+
+**Note**: This method is less reliable than cookies but doesn't require authentication.
+
+### Cookies for Other Sites (Optional)
+
+For non-YouTube sites (Instagram, Twitter, TikTok, etc.), you can use cookies:
+
+1. Export cookies from your browser using a cookies extension
+2. Save as `cookies.txt` in Netscape format
+3. Set the environment variable:
+   ```bash
+   export COOKIES_PATH=/path/to/cookies.txt
+   ```
+
+This helps with:
+- Private Instagram posts/stories
+- Protected Twitter/X content
+- TikTok private videos
+- Other sites requiring authentication
+
+**Note**: YouTube will always use visitor data instead of cookies for better stability.
 
 ### First-Time Setup
 

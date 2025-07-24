@@ -98,10 +98,32 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 		NoCheckCertificates(). // Skip certificate verification
 		Verbose()              // Enable verbose logging
 
-	// Add cookies if available
-	if cookiesPath := os.Getenv("COOKIES_PATH"); cookiesPath != "" {
-		fmt.Printf("[DOWNLOAD] Using cookies from: %s\n", cookiesPath)
-		dl = dl.Cookies(cookiesPath)
+	// Check if URL is YouTube
+	isYouTube := strings.Contains(url, "youtube.com") || strings.Contains(url, "youtu.be")
+	
+	if isYouTube {
+		// For YouTube, use visitor data instead of cookies
+		visitorData := os.Getenv("YOUTUBE_VISITOR_DATA")
+		if visitorData != "" {
+			fmt.Printf("[DOWNLOAD] Using YouTube visitor data for authentication\n")
+			// Add extractor args for YouTube with visitor data
+			dl = dl.ExtractorArgs("youtubetab:skip=webpage").
+				ExtractorArgs(fmt.Sprintf("youtube:player_skip=webpage,configs;visitor_data=%s", visitorData))
+		} else {
+			fmt.Printf("[DOWNLOAD] No YOUTUBE_VISITOR_DATA configured. Some content may be restricted.\n")
+		}
+	} else {
+		// For all other sites, try to use cookies if available
+		cookiesPath := os.Getenv("COOKIES_PATH")
+		if cookiesPath != "" {
+			// Check if cookies file exists
+			if _, err := os.Stat(cookiesPath); err == nil {
+				fmt.Printf("[DOWNLOAD] Using cookies from: %s\n", cookiesPath)
+				dl = dl.Cookies(cookiesPath)
+			} else {
+				fmt.Printf("[DOWNLOAD] Warning: Cookies file not found at %s\n", cookiesPath)
+			}
+		}
 	}
 
 	// Download the media
@@ -109,6 +131,21 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	result, err := dl.Run(context.Background(), url)
 	if err != nil {
 		fmt.Printf("[DOWNLOAD] yt-dlp failed: %v\n", err)
+		
+		// Check for common errors
+		errStr := err.Error()
+		
+		if isYouTube && (strings.Contains(errStr, "Sign in to confirm") || strings.Contains(errStr, "age")) {
+			return ctx.Handler.SendResponse(ctx.MessageInfo, 
+				framework.Error("❌ This video is age-restricted.\n\nTo download it, set YOUTUBE_VISITOR_DATA environment variable.\nSee README for instructions."))
+		} else if strings.Contains(errStr, "This content isn't available") {
+			return ctx.Handler.SendResponse(ctx.MessageInfo, 
+				framework.Error("❌ Content unavailable. Video may be private, deleted, or region-blocked."))
+		} else if !isYouTube && (strings.Contains(errStr, "login") || strings.Contains(errStr, "private") || strings.Contains(errStr, "authenticate")) {
+			return ctx.Handler.SendResponse(ctx.MessageInfo, 
+				framework.Error("❌ This content requires authentication.\n\nExport cookies from your browser and set COOKIES_PATH.\nSee README for instructions."))
+		}
+		
 		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Download failed: %v", err)))
 	}
 
