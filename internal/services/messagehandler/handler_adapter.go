@@ -11,6 +11,7 @@ import (
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
 	waProto "go.mau.fi/whatsmeow/proto/waE2E"
+	"google.golang.org/protobuf/proto"
 )
 
 // HandlerAdapter adapts WhatsMeowEventHandler to implement framework.HandlerInterface
@@ -45,6 +46,58 @@ func (a *HandlerAdapter) SendMedia(msgInfo types.MessageInfo, mediaType framewor
 	default:
 		return fmt.Errorf("unsupported media type: %v", mediaType)
 	}
+}
+
+func (a *HandlerAdapter) SendImage(msgInfo types.MessageInfo, upload framework.UploadResponse, caption string) error {
+	msg := &waProto.Message{
+		ImageMessage: &waProto.ImageMessage{
+			Caption:       proto.String(caption),
+			Mimetype:      proto.String("image/jpeg"),
+			URL:           proto.String(upload.URL),
+			DirectPath:    proto.String(upload.DirectPath),
+			MediaKey:      upload.MediaKey,
+			FileEncSHA256: upload.FileEncSHA256,
+			FileSHA256:    upload.FileSHA256,
+			FileLength:    proto.Uint64(upload.FileLength),
+		},
+	}
+	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
+	return err
+}
+
+func (a *HandlerAdapter) SendVideo(msgInfo types.MessageInfo, upload framework.UploadResponse, caption string) error {
+	msg := &waProto.Message{
+		VideoMessage: &waProto.VideoMessage{
+			Caption:       proto.String(caption),
+			Mimetype:      proto.String("video/mp4"),
+			URL:           proto.String(upload.URL),
+			DirectPath:    proto.String(upload.DirectPath),
+			MediaKey:      upload.MediaKey,
+			FileEncSHA256: upload.FileEncSHA256,
+			FileSHA256:    upload.FileSHA256,
+			FileLength:    proto.Uint64(upload.FileLength),
+		},
+	}
+	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
+	return err
+}
+
+func (a *HandlerAdapter) SendDocument(msgInfo types.MessageInfo, upload framework.UploadResponse, caption string) error {
+	msg := &waProto.Message{
+		DocumentMessage: &waProto.DocumentMessage{
+			Caption:       proto.String(caption),
+			FileName:      proto.String("document"),
+			Mimetype:      proto.String("application/octet-stream"),
+			URL:           proto.String(upload.URL),
+			DirectPath:    proto.String(upload.DirectPath),
+			MediaKey:      upload.MediaKey,
+			FileEncSHA256: upload.FileEncSHA256,
+			FileSHA256:    upload.FileSHA256,
+			FileLength:    proto.Uint64(upload.FileLength),
+		},
+	}
+	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
+	return err
 }
 
 func (a *HandlerAdapter) EditMessage(msgInfo types.MessageInfo, newText string) error {

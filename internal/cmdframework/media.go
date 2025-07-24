@@ -1,4 +1,4 @@
-package command
+package cmdframework
 
 import (
 	"context"
@@ -18,6 +18,19 @@ type MediaUploader struct {
 
 func NewMediaUploader(client ClientInterface) *MediaUploader {
 	return &MediaUploader{client: client}
+}
+
+// Upload methods (without sending)
+func (m *MediaUploader) UploadImage(ctx context.Context, imageData []byte) (UploadResponse, error) {
+	return m.client.Upload(ctx, imageData, MediaImage)
+}
+
+func (m *MediaUploader) UploadVideo(ctx context.Context, videoData []byte) (UploadResponse, error) {
+	return m.client.Upload(ctx, videoData, MediaVideo)
+}
+
+func (m *MediaUploader) UploadDocument(ctx context.Context, docData []byte, filename string) (UploadResponse, error) {
+	return m.client.Upload(ctx, docData, MediaDocument)
 }
 
 func (m *MediaUploader) UploadAndSendImage(ctx context.Context, to types.JID, imageData []byte, caption string) error {

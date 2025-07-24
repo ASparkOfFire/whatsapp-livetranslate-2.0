@@ -1,4 +1,4 @@
-package command
+package cmdframework
 
 import (
 	"context"
@@ -61,6 +61,9 @@ type Context struct {
 type HandlerInterface interface {
 	SendResponse(msgInfo types.MessageInfo, text string) error
 	SendMedia(msgInfo types.MessageInfo, mediaType MediaType, data []byte, caption string) error
+	SendImage(msgInfo types.MessageInfo, upload UploadResponse, caption string) error
+	SendVideo(msgInfo types.MessageInfo, upload UploadResponse, caption string) error
+	SendDocument(msgInfo types.MessageInfo, upload UploadResponse, caption string) error
 	EditMessage(msgInfo types.MessageInfo, newText string) error
 	GetClient() ClientInterface
 	GetTranslator() TranslatorInterface

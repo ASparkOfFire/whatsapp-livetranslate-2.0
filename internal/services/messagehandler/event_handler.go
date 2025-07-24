@@ -89,6 +89,10 @@ func (h *WhatsMeowEventHandler) InitializeCommands() error {
 		return fmt.Errorf("failed to register supportedlangs command: %w", err)
 	}
 	
+	if err := registry.Register(utility.NewDownloadCommand()); err != nil {
+		return fmt.Errorf("failed to register download command: %w", err)
+	}
+	
 	// Register admin commands
 	if err := registry.Register(admin.NewSetModelCommand()); err != nil {
 		return fmt.Errorf("failed to register setmodel command: %w", err)
@@ -129,7 +133,7 @@ func (h *WhatsMeowEventHandler) InitializeCommands() error {
 	}
 	
 	// Apply middleware to commands that need owner permissions
-	ownerCommands := []string{"ping", "setmodel", "settemp", "image", "meme", "randmoji", "haha"}
+	ownerCommands := []string{"ping", "setmodel", "settemp", "image", "meme", "randmoji", "haha", "download"}
 	for _, cmdName := range ownerCommands {
 		if cmd, exists := registry.Get(cmdName); exists {
 			wrappedCmd := framework.WithMiddleware(cmd, framework.RequireOwner())
