@@ -26,6 +26,7 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	}
 
 	url := ctx.Args[0]
+	fmt.Printf("[DOWNLOAD] Starting download for URL: %s\n", url)
 
 	// Send initial status message
 	ctx.Handler.SendResponse(ctx.MessageInfo, framework.Info("🔍 Analyzing URL..."))
@@ -33,46 +34,130 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	// Create temporary directory for downloads
 	tempDir, err := os.MkdirTemp("", "whatsapp-download-*")
 	if err != nil {
+		fmt.Printf("[DOWNLOAD] Failed to create temp directory: %v\n", err)
 		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Failed to create temp directory"))
 	}
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		fmt.Printf("[DOWNLOAD] Cleaning up temp directory: %s\n", tempDir)
+		os.RemoveAll(tempDir)
+	}()
+	fmt.Printf("[DOWNLOAD] Created temp directory: %s\n", tempDir)
 
 	// Configure output template
 	outputTemplate := filepath.Join(tempDir, "download.%(ext)s")
+	fmt.Printf("[DOWNLOAD] Output template: %s\n", outputTemplate)
 
 	// Initialize ytdlp with options
 	dl := ytdlp.New().
-		FormatSort("res:720"). // Prefer 720p
-		NoPlaylist().          // Download only single video, not playlist
-		RestrictFilenames().   // Safe filenames
+		Format("best[height<=720]/best"). // Better format selection
+		NoPlaylist().                     // Download only single video, not playlist
+		RestrictFilenames().              // Safe filenames
 		Output(outputTemplate).
-		Cookies(os.Getenv("COOKIES_PATH"))
+		NoCheckCertificates(). // Skip certificate verification
+		Verbose()              // Enable verbose logging
+
+	// Add cookies if available
+	if cookiesPath := os.Getenv("COOKIES_PATH"); cookiesPath != "" {
+		fmt.Printf("[DOWNLOAD] Using cookies from: %s\n", cookiesPath)
+		dl = dl.Cookies(cookiesPath)
+	}
 
 	// Update status
 	ctx.Handler.SendResponse(ctx.MessageInfo, framework.Info("⬇️ Downloading media..."))
 
 	// Download the media
-	_, err = dl.Run(context.Background(), url)
+	fmt.Printf("[DOWNLOAD] Running yt-dlp...\n")
+	result, err := dl.Run(context.Background(), url)
 	if err != nil {
+		fmt.Printf("[DOWNLOAD] yt-dlp failed: %v\n", err)
 		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Download failed: %v", err)))
 	}
 
+	if result != nil {
+		fmt.Printf("[DOWNLOAD] yt-dlp exit code: %d\n", result.ExitCode)
+		if result.Stdout != "" {
+			fmt.Printf("[DOWNLOAD] yt-dlp stdout:\n%s\n", result.Stdout)
+		}
+		if result.Stderr != "" {
+			fmt.Printf("[DOWNLOAD] yt-dlp stderr:\n%s\n", result.Stderr)
+		}
+	}
+
+	// Wait a moment for file to be fully written
+	time.Sleep(500 * time.Millisecond)
+
 	// Find the downloaded file
 	files, err := filepath.Glob(filepath.Join(tempDir, "download.*"))
-	if err != nil || len(files) == 0 {
-		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Downloaded file not found"))
+	if err != nil {
+		fmt.Printf("[DOWNLOAD] Glob error: %v\n", err)
+		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Error finding downloaded file"))
+	}
+
+	fmt.Printf("[DOWNLOAD] Found %d files in temp directory\n", len(files))
+	for i, f := range files {
+		info, _ := os.Stat(f)
+		if info != nil {
+			fmt.Printf("[DOWNLOAD] File %d: %s (size: %d bytes)\n", i+1, f, info.Size())
+		}
+	}
+
+	if len(files) == 0 {
+		// Try alternative patterns
+		alternativePatterns := []string{
+			filepath.Join(tempDir, "*.mp4"),
+			filepath.Join(tempDir, "*.webm"),
+			filepath.Join(tempDir, "*.mkv"),
+			filepath.Join(tempDir, "*"),
+		}
+
+		for _, pattern := range alternativePatterns {
+			altFiles, _ := filepath.Glob(pattern)
+			if len(altFiles) > 0 {
+				files = altFiles
+				fmt.Printf("[DOWNLOAD] Found files with pattern %s\n", pattern)
+				break
+			}
+		}
+
+		if len(files) == 0 {
+			// List all files in temp directory for debugging
+			allFiles, _ := os.ReadDir(tempDir)
+			fmt.Printf("[DOWNLOAD] All files in temp directory:\n")
+			for _, f := range allFiles {
+				fmt.Printf("[DOWNLOAD]   - %s\n", f.Name())
+			}
+			return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Downloaded file not found"))
+		}
 	}
 	outputFile := files[0]
+	fmt.Printf("[DOWNLOAD] Selected file: %s\n", outputFile)
+
+	// Get file info
+	fileInfo, err := os.Stat(outputFile)
+	if err != nil {
+		fmt.Printf("[DOWNLOAD] Failed to stat file: %v\n", err)
+		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Failed to access downloaded file"))
+	}
+	fmt.Printf("[DOWNLOAD] File size: %d bytes (%.2f MB)\n", fileInfo.Size(), float64(fileInfo.Size())/(1024*1024))
 
 	// Read the file
 	data, err := os.ReadFile(outputFile)
 	if err != nil {
+		fmt.Printf("[DOWNLOAD] Failed to read file: %v\n", err)
 		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Failed to read downloaded file"))
+	}
+	fmt.Printf("[DOWNLOAD] Read %d bytes from file\n", len(data))
+
+	// Check if file is actually empty
+	if len(data) == 0 {
+		fmt.Printf("[DOWNLOAD] ERROR: File is empty!\n")
+		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Downloaded file is empty"))
 	}
 
 	// Check file size (WhatsApp has limits)
 	const maxSize = 16 * 1024 * 1024 // 16MB limit for WhatsApp
 	if len(data) > maxSize {
+		fmt.Printf("[DOWNLOAD] File too large: %d bytes\n", len(data))
 		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("File too large (%.1f MB). Maximum size is 16 MB", float64(len(data))/(1024*1024))))
 	}
 
@@ -81,16 +166,27 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 
 	// Upload based on type
 	uploader := framework.NewMediaUploader(ctx.Handler.GetClient())
+	extension := strings.ToLower(filepath.Ext(outputFile))
+	fmt.Printf("[DOWNLOAD] File extension: %s\n", extension)
 
-	if strings.HasSuffix(strings.ToLower(outputFile), ".mp4") || strings.HasSuffix(strings.ToLower(outputFile), ".webm") {
+	if extension == ".mp4" || extension == ".webm" || extension == ".mkv" || extension == ".avi" {
+		fmt.Printf("[DOWNLOAD] Uploading as video...\n")
 		// Upload as video
 		resp, err := uploader.UploadVideo(ctx.Context, data)
 		if err != nil {
+			fmt.Printf("[DOWNLOAD] Video upload failed: %v\n", err)
 			return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Failed to upload video: %v", err)))
 		}
+		fmt.Printf("[DOWNLOAD] Video uploaded successfully: URL=%s, DirectPath=%s, FileLength=%d\n", resp.URL, resp.DirectPath, resp.FileLength)
 
 		// Send video with caption
-		return ctx.Handler.SendVideo(ctx.MessageInfo, resp, caption)
+		err = ctx.Handler.SendVideo(ctx.MessageInfo, resp, caption)
+		if err != nil {
+			fmt.Printf("[DOWNLOAD] Failed to send video message: %v\n", err)
+			return err
+		}
+		fmt.Printf("[DOWNLOAD] Video sent successfully\n")
+		return nil
 	} else {
 		// Upload as image or document
 		if isImageFile(outputFile) {
