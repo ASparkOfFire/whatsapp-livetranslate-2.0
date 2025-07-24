@@ -26,7 +26,7 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	}
 
 	url := ctx.Args[0]
-	
+
 	// Send initial status message
 	ctx.Handler.SendResponse(ctx.MessageInfo, framework.Info("🔍 Analyzing URL..."))
 
@@ -39,14 +39,15 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 
 	// Configure output template
 	outputTemplate := filepath.Join(tempDir, "download.%(ext)s")
-	
+
 	// Initialize ytdlp with options
 	dl := ytdlp.New().
 		FormatSort("res:720"). // Prefer 720p
 		NoPlaylist().          // Download only single video, not playlist
 		RestrictFilenames().   // Safe filenames
-		Output(outputTemplate)
-	
+		Output(outputTemplate).
+		Cookies(os.Getenv("COOKIES_PATH"))
+
 	// Update status
 	ctx.Handler.SendResponse(ctx.MessageInfo, framework.Info("⬇️ Downloading media..."))
 
@@ -77,17 +78,17 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 
 	// Prepare caption
 	caption := fmt.Sprintf("📥 Downloaded from: %s", url)
-	
+
 	// Upload based on type
 	uploader := framework.NewMediaUploader(ctx.Handler.GetClient())
-	
+
 	if strings.HasSuffix(strings.ToLower(outputFile), ".mp4") || strings.HasSuffix(strings.ToLower(outputFile), ".webm") {
 		// Upload as video
 		resp, err := uploader.UploadVideo(ctx.Context, data)
 		if err != nil {
 			return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Failed to upload video: %v", err)))
 		}
-		
+
 		// Send video with caption
 		return ctx.Handler.SendVideo(ctx.MessageInfo, resp, caption)
 	} else {
