@@ -7,6 +7,7 @@ services:
     environment:
       IS_DOCKER: "true"
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      COOKIES_PATH: ${COOKIES_PATH}
     volumes:
       - whatsapp-go:/data
 
