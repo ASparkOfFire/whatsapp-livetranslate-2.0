@@ -3,239 +3,140 @@ package messagehandler
 import (
 	"context"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"strconv"
 	"strings"
-	"time"
-
-	waProto "go.mau.fi/whatsmeow/proto/waE2E"
-
+	
+	framework "github.com/asparkoffire/whatsapp-livetranslate-go/internal/cmdframework"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/handlers"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/handlers/admin"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/handlers/fun"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/handlers/translation"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/handlers/utility"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
-	"github.com/mdp/qrterminal/v3"
-	"go.mau.fi/whatsmeow"
+	waProto "go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
-	"google.golang.org/protobuf/proto"
 )
 
+// handleMessage uses the new command system
 func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo types.MessageInfo) {
-	start := time.Now()
-
 	text := extractText(msg)
-
+	
 	if text == "" || !strings.HasPrefix(text, "/") {
 		return
 	}
-	parts := strings.Split(text, " ")
-	if parts[0] == "" {
+	
+	// Parse command and arguments
+	parts := strings.Fields(text)
+	if len(parts) == 0 {
 		return
 	}
-
-	cmd := strings.TrimPrefix(parts[0], "/")
-	switch cmd {
-	case "help":
-		h.SendResponse(msgInfo, HelpMessage)
-	case "supportedlangs":
-		h.SendResponse(msgInfo, getSupportedLanguages())
-	case "randmoji":
-		if msgInfo.IsFromMe {
-			duration := 10 // default duration
-
-			if len(parts) > 1 {
-				if d, err := strconv.Atoi(parts[1]); err == nil && d > 0 && d <= 10 {
-					duration = d
-				}
+	
+	cmdName := strings.TrimPrefix(parts[0], "/")
+	args := parts[1:]
+	rawArgs := ""
+	if len(parts) > 1 {
+		rawArgs = strings.Join(parts[1:], " ")
+	}
+	
+	// Look up command in registry
+	cmd, exists := h.commandRegistry.Get(cmdName)
+	if !exists {
+		// Check if it's a language code for translation
+		if len(cmdName) == 2 {
+			if _, isLang := constants.SupportedLanguages[cmdName]; isLang {
+				cmd, _ = h.commandRegistry.Get(cmdName)
 			}
-
-			go randomEmoji(h, msgInfo, duration)
 		}
-	case "haha":
-		if msgInfo.IsFromMe {
-			duration := 3 // default duration
-			go haha(h, msgInfo, duration)
+		
+		if cmd == nil {
+			return // Silent fail for unknown commands
 		}
-	case "ping":
-		if msgInfo.IsFromMe {
-			h.SendResponse(msgInfo, fmt.Sprintf("Pong: %s", time.Since(start).String()))
-		}
-	case "setmodel":
-		if msgInfo.IsFromMe {
-			if len(parts) < 2 {
-				h.SendResponse(msgInfo, "Please specify a model ID. Supported models: gemini-1.5-flash, gemini-2.0-flash, gemini-2.5-flash")
-				return
-			}
-			modelID := parts[1]
-			if err := h.translator.SetModel(modelID); err != nil {
-				h.SendResponse(msgInfo, fmt.Sprintf("Error setting model: %v", err))
-				return
-			}
-			h.SendResponse(msgInfo, fmt.Sprintf("Successfully set translation model to: %s", modelID))
-		}
-	case "getmodel":
-		h.SendResponse(msgInfo, fmt.Sprintf("Current translation model: %s", h.translator.GetModel()))
-	case "settemp":
-		if msgInfo.IsFromMe {
-			if len(parts) < 2 {
-				h.SendResponse(msgInfo, "Please specify a temperature value between 0.0 and 1.0")
-				return
-			}
-			temp, err := strconv.ParseFloat(parts[1], 64)
-			if err != nil {
-				h.SendResponse(msgInfo, "Invalid temperature value. Please provide a number between 0.0 and 1.0")
-				return
-			}
-			if err := h.translator.SetTemperature(temp); err != nil {
-				h.SendResponse(msgInfo, fmt.Sprintf("Error setting temperature: %v", err))
-				return
-			}
-			h.SendResponse(msgInfo, fmt.Sprintf("Successfully set temperature to: %.1f", temp))
-		}
-	case "gettemp":
-		h.SendResponse(msgInfo, fmt.Sprintf("Current temperature: %.1f", h.translator.GetTemperature()))
-	case "image":
-		if msgInfo.IsFromMe {
-			if len(parts) < 2 {
-				h.SendResponse(msgInfo, "Please provide a prompt for image generation. Example: /image a beautiful sunset over mountains")
-				return
-			}
-			prompt := strings.Join(parts[1:], " ")
-			fmt.Printf("Received image generation request from %s with prompt: %s\n", msgInfo.Sender, prompt)
-
-			fmt.Println("Generating image using Gemini AI...")
-			imageBytes, err := h.imageGenerator.GenerateImage(context.Background(), prompt)
-			if err != nil {
-				fmt.Printf("Error generating image: %v\n", err)
-				h.SendResponse(msgInfo, fmt.Sprintf("Error generating image: %v", err))
-				return
-			}
-			fmt.Printf("Successfully generated image (%d bytes)\n", len(imageBytes))
-
-			// Upload the image to WhatsApp
-			fmt.Printf("Uploading image to WhatsApp...\n")
-			uploaded, err := h.client.Upload(context.Background(), imageBytes, whatsmeow.MediaImage)
-			if err != nil {
-				fmt.Printf("Error uploading image: %v\n", err)
-				h.SendResponse(msgInfo, fmt.Sprintf("Error uploading image: %v", err))
-				return
-			}
-
-			// Send the image
-			msg := &waProto.Message{
-				ImageMessage: &waProto.ImageMessage{
-					Caption:       proto.String(prompt),
-					Mimetype:      proto.String("image/jpeg"),
-					URL:           proto.String(uploaded.URL),
-					DirectPath:    proto.String(uploaded.DirectPath),
-					MediaKey:      uploaded.MediaKey,
-					FileEncSHA256: uploaded.FileEncSHA256,
-					FileSHA256:    uploaded.FileSHA256,
-					FileLength:    proto.Uint64(uploaded.FileLength),
-				},
-			}
-			fmt.Printf("Sending generated image to %s...\n", msgInfo.Chat)
-			_, err = h.client.SendMessage(context.Background(), msgInfo.Chat, msg)
-			if err != nil {
-				fmt.Printf("Error sending image: %v\n", err)
-				h.SendResponse(msgInfo, fmt.Sprintf("Error sending image: %v", err))
-				return
-			}
-			fmt.Printf("Successfully sent image to %s\n", msgInfo.Chat)
-		}
-	case "meme":
-		if msgInfo.IsFromMe {
-			var subreddit string
-			if len(parts) > 1 {
-				subreddit = parts[1]
-			}
-
-			fmt.Printf("Fetching random meme%s...\n", map[bool]string{true: fmt.Sprintf(" from r/%s", subreddit), false: ""}[subreddit != ""])
-			memeResp, err := h.memeGenerator.GetRandomMeme(context.Background(), subreddit)
-			if err != nil {
-				fmt.Printf("Error fetching meme: %v\n", err)
-				h.SendResponse(msgInfo, fmt.Sprintf("Error fetching meme: %v", err))
-				return
-			}
-
-			if len(memeResp.Memes) == 0 {
-				h.SendResponse(msgInfo, "No memes found")
-				return
-			}
-
-			meme := memeResp.Memes[0]
-			fmt.Printf("Found meme: %s from r/%s\n", meme.Title, meme.Subreddit)
-
-			// Download the meme image
-			resp, err := http.Get(meme.URL)
-			if err != nil {
-				fmt.Printf("Error downloading meme: %v\n", err)
-				h.SendResponse(msgInfo, fmt.Sprintf("Error downloading meme: %v", err))
-				return
-			}
-			defer resp.Body.Close()
-
-			imageBytes, err := io.ReadAll(resp.Body)
-			if err != nil {
-				fmt.Printf("Error reading meme data: %v\n", err)
-				h.SendResponse(msgInfo, fmt.Sprintf("Error reading meme data: %v", err))
-				return
-			}
-
-			// Upload the image to WhatsApp
-			fmt.Printf("Uploading meme to WhatsApp...\n")
-			uploaded, err := h.client.Upload(context.Background(), imageBytes, whatsmeow.MediaImage)
-			if err != nil {
-				fmt.Printf("Error uploading meme: %v\n", err)
-				h.SendResponse(msgInfo, fmt.Sprintf("Error uploading meme: %v", err))
-				return
-			}
-
-			// Send the meme
-			caption := fmt.Sprintf("r/%s: %s", meme.Subreddit, meme.Title)
-			msg := &waProto.Message{
-				ImageMessage: &waProto.ImageMessage{
-					Caption:       proto.String(caption),
-					Mimetype:      proto.String("image/jpeg"),
-					URL:           proto.String(uploaded.URL),
-					DirectPath:    proto.String(uploaded.DirectPath),
-					MediaKey:      uploaded.MediaKey,
-					FileEncSHA256: uploaded.FileEncSHA256,
-					FileSHA256:    uploaded.FileSHA256,
-					FileLength:    proto.Uint64(uploaded.FileLength),
-				},
-			}
-			fmt.Printf("Sending meme to %s...\n", msgInfo.Chat)
-			_, err = h.client.SendMessage(context.Background(), msgInfo.Chat, msg)
-			if err != nil {
-				fmt.Printf("Error sending meme: %v\n", err)
-				h.SendResponse(msgInfo, fmt.Sprintf("Error sending meme: %v", err))
-				return
-			}
-			fmt.Printf("Successfully sent meme to %s\n", msgInfo.Chat)
-		}
-	default:
-		if len(cmd) == 2 { // it is a two digits language code.
-			if _, ok := constants.SupportedLanguages[cmd]; !ok {
-				return // dont handle if it is an invalid code
-			}
-			h.handleTranslation(msg, text, msgInfo)
-		}
+	}
+	
+	// Create command context
+	adapter := NewHandlerAdapter(h)
+	ctx := &framework.Context{
+		Context:     context.Background(),
+		Message:     msg,
+		MessageInfo: msgInfo,
+		Command:     cmdName,
+		Args:        args,
+		RawArgs:     rawArgs,
+		Handler:     adapter,
+	}
+	
+	// Execute command
+	if err := cmd.Execute(ctx); err != nil {
+		fmt.Printf("Command execution error: %v\n", err)
 	}
 }
 
-func (h *WhatsMeowEventHandler) setupQRLogin() error {
-	qrChan, _ := h.client.GetQRChannel(context.Background())
-	err := h.client.Connect()
-	if err != nil {
-		return err
+// InitializeCommands sets up all commands in the registry
+func (h *WhatsMeowEventHandler) InitializeCommands() error {
+	registry := h.commandRegistry
+	
+	// Register help command
+	helpCmd := handlers.NewHelpCommand(registry)
+	if err := registry.Register(helpCmd); err != nil {
+		return fmt.Errorf("failed to register help command: %w", err)
 	}
-
-	for evt := range qrChan {
-		if evt.Event == "code" {
-			qrterminal.GenerateHalfBlock(evt.Code, qrterminal.L, os.Stdout)
-		} else {
-			fmt.Println("Login event:", evt.Event)
+	
+	// Register utility commands
+	if err := registry.Register(utility.NewPingCommand()); err != nil {
+		return fmt.Errorf("failed to register ping command: %w", err)
+	}
+	
+	if err := registry.Register(utility.NewSupportedLangsCommand()); err != nil {
+		return fmt.Errorf("failed to register supportedlangs command: %w", err)
+	}
+	
+	// Register admin commands
+	if err := registry.Register(admin.NewSetModelCommand()); err != nil {
+		return fmt.Errorf("failed to register setmodel command: %w", err)
+	}
+	
+	if err := registry.Register(admin.NewGetModelCommand()); err != nil {
+		return fmt.Errorf("failed to register getmodel command: %w", err)
+	}
+	
+	if err := registry.Register(admin.NewSetTempCommand()); err != nil {
+		return fmt.Errorf("failed to register settemp command: %w", err)
+	}
+	
+	if err := registry.Register(admin.NewGetTempCommand()); err != nil {
+		return fmt.Errorf("failed to register gettemp command: %w", err)
+	}
+	
+	// Register fun commands
+	if err := registry.Register(fun.NewImageCommand()); err != nil {
+		return fmt.Errorf("failed to register image command: %w", err)
+	}
+	
+	if err := registry.Register(fun.NewMemeCommand()); err != nil {
+		return fmt.Errorf("failed to register meme command: %w", err)
+	}
+	
+	if err := registry.Register(fun.NewRandmojiCommand()); err != nil {
+		return fmt.Errorf("failed to register randmoji command: %w", err)
+	}
+	
+	if err := registry.Register(fun.NewHahaCommand()); err != nil {
+		return fmt.Errorf("failed to register haha command: %w", err)
+	}
+	
+	// Register translation commands for all supported languages
+	if err := translation.RegisterTranslationCommands(registry); err != nil {
+		return fmt.Errorf("failed to register translation commands: %w", err)
+	}
+	
+	// Apply middleware to commands that need owner permissions
+	ownerCommands := []string{"ping", "setmodel", "settemp", "image", "meme", "randmoji", "haha"}
+	for _, cmdName := range ownerCommands {
+		if cmd, exists := registry.Get(cmdName); exists {
+			wrappedCmd := framework.WithMiddleware(cmd, framework.RequireOwner())
+			// Re-register with middleware
+			registry.Register(wrappedCmd)
 		}
 	}
+	
 	return nil
 }
