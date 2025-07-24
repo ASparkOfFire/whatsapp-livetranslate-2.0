@@ -8,22 +8,61 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	framework "github.com/asparkoffire/whatsapp-livetranslate-go/internal/cmdframework"
 	"github.com/lrstanley/go-ytdlp"
 )
 
-type DownloadCommand struct{}
+type DownloadCommand struct {
+	mu              sync.Mutex
+	isDownloading   bool
+	lastDownloadTime time.Time
+}
+
+var downloadInstance = &DownloadCommand{}
 
 func NewDownloadCommand() *DownloadCommand {
-	return &DownloadCommand{}
+	return downloadInstance
 }
 
 func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	if len(ctx.Args) == 0 {
 		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Please provide a URL to download"))
 	}
+
+	// Check rate limiting
+	c.mu.Lock()
+	
+	// Check if download is already in progress
+	if c.isDownloading {
+		c.mu.Unlock()
+		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Warning("⏳ A download is already in progress. Please wait for it to complete."))
+	}
+	
+	// Check cooldown period (1 minute)
+	if !c.lastDownloadTime.IsZero() {
+		timeSinceLastDownload := time.Since(c.lastDownloadTime)
+		if timeSinceLastDownload < 1*time.Minute {
+			remainingTime := 1*time.Minute - timeSinceLastDownload
+			c.mu.Unlock()
+			return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Warning(fmt.Sprintf("⏱️ Please wait %d seconds before downloading again.", int(remainingTime.Seconds()))))
+		}
+	}
+	
+	// Mark as downloading
+	c.isDownloading = true
+	c.mu.Unlock()
+	
+	// Ensure we mark as not downloading when done
+	defer func() {
+		c.mu.Lock()
+		c.isDownloading = false
+		c.lastDownloadTime = time.Now()
+		c.mu.Unlock()
+		fmt.Printf("[DOWNLOAD] Download completed, cooldown started\n")
+	}()
 
 	url := ctx.Args[0]
 	fmt.Printf("[DOWNLOAD] Starting download for URL: %s\n", url)
@@ -35,6 +74,10 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	tempDir, err := os.MkdirTemp("", "whatsapp-download-*")
 	if err != nil {
 		fmt.Printf("[DOWNLOAD] Failed to create temp directory: %v\n", err)
+		// Reset download state on early error
+		c.mu.Lock()
+		c.isDownloading = false
+		c.mu.Unlock()
 		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Failed to create temp directory"))
 	}
 	defer func() {
