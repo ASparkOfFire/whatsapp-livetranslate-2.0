@@ -66,9 +66,8 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 
 	url := ctx.Args[0]
 	fmt.Printf("[DOWNLOAD] Starting download for URL: %s\n", url)
-
-	// Send initial status message
-	ctx.Handler.SendResponse(ctx.MessageInfo, framework.Info("🔍 Analyzing URL..."))
+	
+	// We'll only send the final result, not intermediate status messages
 
 	// Create temporary directory for downloads
 	tempDir, err := os.MkdirTemp("", "whatsapp-download-*")
@@ -104,9 +103,6 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 		fmt.Printf("[DOWNLOAD] Using cookies from: %s\n", cookiesPath)
 		dl = dl.Cookies(cookiesPath)
 	}
-
-	// Update status
-	ctx.Handler.SendResponse(ctx.MessageInfo, framework.Info("⬇️ Downloading media..."))
 
 	// Download the media
 	fmt.Printf("[DOWNLOAD] Running yt-dlp...\n")
