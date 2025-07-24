@@ -73,7 +73,7 @@ func (c *TranslateCommand) handleMediaCaptionTranslation(ctx *framework.Context)
 	}
 
 	translated, err := ctx.Handler.GetTranslator().TranslateText(
-		context.Background(), textToTranslate, detectedLang, c.targetLang.String())
+		context.Background(), textToTranslate, detectedLang, c.langCode)
 	if err != nil {
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Translation failed: %v", err)))
 		return true
@@ -153,7 +153,7 @@ func (c *TranslateCommand) handleInlineTranslation(ctx *framework.Context) bool 
 	}
 
 	translated, err := ctx.Handler.GetTranslator().TranslateText(
-		context.Background(), textToTranslate, detectedLang, c.targetLang.String())
+		context.Background(), textToTranslate, detectedLang, c.langCode)
 	if err != nil {
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Translation failed: %v", err)))
 		return false
