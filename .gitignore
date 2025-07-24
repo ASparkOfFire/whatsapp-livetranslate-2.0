@@ -8,6 +8,9 @@
 *.so
 *.dylib
 
+# Main binary
+whatsapp-livetranslate
+
 # Test binary, built with `go test -c`
 *.test
 
