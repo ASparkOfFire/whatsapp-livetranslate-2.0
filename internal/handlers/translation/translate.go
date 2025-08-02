@@ -50,8 +50,8 @@ func (c *TranslateCommand) Metadata() *framework.Metadata {
 		Usage:       fmt.Sprintf("/%s <text>", c.langCode),
 		Examples: []string{
 			fmt.Sprintf("/%s Hello world", c.langCode),
-			fmt.Sprintf("Reply to a message with /%s", c.langCode),
-			fmt.Sprintf("Caption media with /%s <text>", c.langCode),
+			fmt.Sprintf("Quote a message and reply with /%s", c.langCode),
+			fmt.Sprintf("Media caption: /%s <text> (returns translation)", c.langCode),
 		},
 	}
 }
@@ -79,14 +79,10 @@ func (c *TranslateCommand) handleMediaCaptionTranslation(ctx *framework.Context)
 		return true
 	}
 
-	if ctx.MessageInfo.IsFromMe {
-		if err := ctx.Handler.EditMessage(ctx.MessageInfo, translated); err != nil {
-			fmt.Printf("Caption edit failed: %v\n", err)
-			ctx.Handler.SendResponse(ctx.MessageInfo, translated)
-		}
-	} else {
-		ctx.Handler.SendResponse(ctx.MessageInfo, translated)
-	}
+	// For media messages, we send the translation as a text response
+	// To actually translate the caption of a media, quote the media message
+	response := fmt.Sprintf("📸 *Caption Translation:*\n%s\n\n_💡 Tip: To translate media captions, quote the message and use /%s_", translated, c.langCode)
+	ctx.Handler.SendResponse(ctx.MessageInfo, response)
 
 	return true
 }
