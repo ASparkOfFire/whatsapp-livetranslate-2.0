@@ -112,13 +112,17 @@ func (c *TranslateCommand) handleQuotedMessageTranslation(ctx *framework.Context
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Could not detect source language"))
 		return true
 	}
+	
+	fmt.Printf("[TRANSLATE] Quoted message translation: detected=%s, target=%s, text=%s\n", detectedLang, c.langCode, quotedText)
 
 	translated, err := ctx.Handler.GetTranslator().TranslateText(
-		context.Background(), quotedText, detectedLang, c.targetLang.String())
+		context.Background(), quotedText, detectedLang, c.langCode)
 	if err != nil {
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Translation failed: %v", err)))
 		return true
 	}
+	
+	fmt.Printf("[TRANSLATE] Translation result: %s\n", translated)
 
 	quotedMsgID := ctx.Message.GetExtendedTextMessage().GetContextInfo().GetStanzaID()
 	isMedia := isMediaMessage(quotedMsg)
@@ -151,6 +155,8 @@ func (c *TranslateCommand) handleInlineTranslation(ctx *framework.Context) bool 
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Could not detect source language"))
 		return false
 	}
+	
+	fmt.Printf("[TRANSLATE] Inline translation: detected=%s, target=%s, text=%s\n", detectedLang, c.langCode, textToTranslate)
 
 	translated, err := ctx.Handler.GetTranslator().TranslateText(
 		context.Background(), textToTranslate, detectedLang, c.langCode)
@@ -158,6 +164,8 @@ func (c *TranslateCommand) handleInlineTranslation(ctx *framework.Context) bool 
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Translation failed: %v", err)))
 		return false
 	}
+	
+	fmt.Printf("[TRANSLATE] Translation result: %s\n", translated)
 
 	ctx.Handler.SendResponse(ctx.MessageInfo, translated)
 	return true
