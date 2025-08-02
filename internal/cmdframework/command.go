@@ -65,6 +65,7 @@ type HandlerInterface interface {
 	SendVideo(msgInfo types.MessageInfo, upload UploadResponse, caption string) error
 	SendDocument(msgInfo types.MessageInfo, upload UploadResponse, caption string) error
 	EditMessage(msgInfo types.MessageInfo, newText string) error
+	EditMessageWithOriginal(msgInfo types.MessageInfo, newText string, originalMsg *waProto.Message) error
 	GetClient() ClientInterface
 	GetTranslator() TranslatorInterface
 	GetImageGenerator() ImageGeneratorInterface

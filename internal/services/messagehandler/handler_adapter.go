@@ -104,6 +104,10 @@ func (a *HandlerAdapter) EditMessage(msgInfo types.MessageInfo, newText string) 
 	return a.WhatsMeowEventHandler.editMessageContent(msgInfo.Chat, msgInfo.ID, newText, nil)
 }
 
+func (a *HandlerAdapter) EditMessageWithOriginal(msgInfo types.MessageInfo, newText string, originalMsg *waProto.Message) error {
+	return a.WhatsMeowEventHandler.editMessageContent(msgInfo.Chat, msgInfo.ID, newText, originalMsg)
+}
+
 func (a *HandlerAdapter) GetClient() framework.ClientInterface {
 	return &ClientAdapter{client: a.client}
 }

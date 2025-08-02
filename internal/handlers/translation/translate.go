@@ -71,6 +71,8 @@ func (c *TranslateCommand) handleMediaCaptionTranslation(ctx *framework.Context)
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Could not detect source language"))
 		return true
 	}
+	
+	fmt.Printf("[TRANSLATE] Media caption translation: detected=%s, target=%s, text=%s\n", detectedLang, c.langCode, textToTranslate)
 
 	translated, err := ctx.Handler.GetTranslator().TranslateText(
 		context.Background(), textToTranslate, detectedLang, c.langCode)
@@ -78,11 +80,21 @@ func (c *TranslateCommand) handleMediaCaptionTranslation(ctx *framework.Context)
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Translation failed: %v", err)))
 		return true
 	}
+	
+	fmt.Printf("[TRANSLATE] Media caption translated: %s\n", translated)
 
-	// For media messages, we send the translation as a text response
-	// To actually translate the caption of a media, quote the media message
-	response := fmt.Sprintf("📸 *Caption Translation:*\n%s\n\n_💡 Tip: To translate media captions, quote the message and use /%s_", translated, c.langCode)
-	ctx.Handler.SendResponse(ctx.MessageInfo, response)
+	// For media messages from the user, we need to edit the caption
+	if ctx.MessageInfo.IsFromMe {
+		// Use the new method that passes the original message for proper media caption editing
+		if err := ctx.Handler.EditMessageWithOriginal(ctx.MessageInfo, translated, ctx.Message); err != nil {
+			fmt.Printf("[TRANSLATE] Caption edit failed: %v\n", err)
+			// Fallback to sending as text response
+			ctx.Handler.SendResponse(ctx.MessageInfo, translated)
+		}
+	} else {
+		// For messages from others, send as text response
+		ctx.Handler.SendResponse(ctx.MessageInfo, translated)
+	}
 
 	return true
 }
