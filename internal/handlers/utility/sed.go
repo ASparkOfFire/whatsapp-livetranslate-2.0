@@ -24,7 +24,7 @@ func (c *SedCommand) Name() string {
 
 // Description returns the description of the command
 func (c *SedCommand) Description() string {
-	return "Applies a sed-like substitution to a quoted message. Usage: s/pattern/replacement/flags"
+	return "Applies a sed-like substitution to a quoted message. Usage: s/pattern/replacement/flags or /s s/pattern/replacement/flags. Flags: g - global, i - ignore case, c - strikethrough original text"
 }
 
 // Execute executes the sed command
@@ -110,7 +110,7 @@ func (c *SedCommand) Execute(ctx *framework.Context) error {
 			matchedString := quotedText[firstMatchIndex[0]:firstMatchIndex[1]]
 			if crossOut {
 				log.Println("Sed Command: Cross-out enabled")
-				editedText = quotedText[:firstMatchIndex[0]] + fmt.Sprintf("~%s~%s", matchedString, replacement) + quotedText[firstMatchIndex[1]:]
+				editedText = quotedText[:firstMatchIndex[0]] + fmt.Sprintf(" ~%s~%s ", matchedString, replacement) + quotedText[firstMatchIndex[1]:]
 			} else {
 				editedText = quotedText[:firstMatchIndex[0]] + compiledPattern.ReplaceAllString(matchedString, replacement) + quotedText[firstMatchIndex[1]:]
 			}
@@ -132,8 +132,8 @@ func (c *SedCommand) Execute(ctx *framework.Context) error {
 func (c *SedCommand) Metadata() *framework.Metadata {
 	return &framework.Metadata{
 		Name:        "s",
-		Description: "Applies a sed-like substitution to a quoted message.",
+		Description: "Applies a sed-like substitution to a quoted message. Flags: g - global, i - ignore case, c - strikethrough original text",
 		Category:    "Utility",
-		Usage:       "s/pattern/replacement/flags",
+		Usage:       "s/pattern/replacement/flags or /s s/pattern/replacement/flags",
 	}
 }

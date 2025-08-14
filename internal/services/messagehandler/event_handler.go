@@ -19,22 +19,30 @@ import (
 // handleMessage uses the new command system
 func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo types.MessageInfo) {
 	text := extractText(msg)
+	var cmdName string
+	var args []string
+	var rawArgs string
 
-	if text == "" || !strings.HasPrefix(text, "/") {
+	if strings.HasPrefix(text, "s/") {
+		cmdName = "s"
+		rawArgs = text
+		args = []string{text}
+	} else if strings.HasPrefix(text, "/") {
+		parts := strings.Fields(text)
+		if len(parts) == 0 {
+			return
+		}
+		cmdName = strings.TrimPrefix(parts[0], "/")
+		args = parts[1:]
+		if len(parts) > 1 {
+			rawArgs = strings.Join(parts[1:], " ")
+		}
+	} else {
 		return
 	}
 
-	// Parse command and arguments
-	parts := strings.Fields(text)
-	if len(parts) == 0 {
+	if cmdName == "" {
 		return
-	}
-
-	cmdName := strings.TrimPrefix(parts[0], "/")
-	args := parts[1:]
-	rawArgs := ""
-	if len(parts) > 1 {
-		rawArgs = strings.Join(parts[1:], " ")
 	}
 
 	// Look up command in registry
@@ -69,6 +77,7 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 		fmt.Printf("Command execution error: %v\n", err)
 	}
 }
+
 
 // InitializeCommands sets up all commands in the registry
 func (h *WhatsMeowEventHandler) InitializeCommands() error {
