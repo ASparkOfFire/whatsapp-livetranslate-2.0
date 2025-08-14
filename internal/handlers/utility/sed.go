@@ -97,7 +97,7 @@ func (c *SedCommand) Execute(ctx *framework.Context) error {
 		if crossOut {
 			log.Println("Sed Command: Cross-out enabled")
 			editedText = compiledPattern.ReplaceAllStringFunc(quotedText, func(match string) string {
-				return fmt.Sprintf("~%s~%s", match, replacement)
+				return fmt.Sprintf("~%s~ %s", match, replacement)
 			})
 		} else {
 			editedText = compiledPattern.ReplaceAllString(quotedText, replacement)
@@ -110,7 +110,7 @@ func (c *SedCommand) Execute(ctx *framework.Context) error {
 			matchedString := quotedText[firstMatchIndex[0]:firstMatchIndex[1]]
 			if crossOut {
 				log.Println("Sed Command: Cross-out enabled")
-				editedText = quotedText[:firstMatchIndex[0]] + fmt.Sprintf(" ~%s~%s ", matchedString, replacement) + quotedText[firstMatchIndex[1]:]
+				editedText = quotedText[:firstMatchIndex[0]] + fmt.Sprintf("~%s~ %s", matchedString, replacement) + quotedText[firstMatchIndex[1]:]
 			} else {
 				editedText = quotedText[:firstMatchIndex[0]] + compiledPattern.ReplaceAllString(matchedString, replacement) + quotedText[firstMatchIndex[1]:]
 			}
