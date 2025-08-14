@@ -65,12 +65,16 @@ func (c *SedCommand) Execute(ctx *framework.Context) error {
 	// Handle flags
 	reFlags := ""
 	global := false
+	crossOut := false
 
 	if strings.Contains(flags, "g") {
 		global = true
 	}
 	if strings.Contains(flags, "i") {
 		reFlags += "(?i)" // Add case-insensitive flag to regex
+	}
+	if strings.Contains(flags, "c") {
+		crossOut = true
 	}
 
 	// Compile the pattern regex
@@ -81,27 +85,23 @@ func (c *SedCommand) Execute(ctx *framework.Context) error {
 
 	var editedText string
 	if global {
-		editedText = compiledPattern.ReplaceAllString(quotedText, replacement)
+		if crossOut {
+			editedText = compiledPattern.ReplaceAllStringFunc(quotedText, func(match string) string {
+				return fmt.Sprintf("~%s~%s", match, replacement)
+			})
+		} else {
+			editedText = compiledPattern.ReplaceAllString(quotedText, replacement)
+		}
 	} else {
 		// Replace only the first occurrence
-		editedText = compiledPattern.ReplaceAllStringFunc(quotedText, func(match string) string {
-			// This anonymous function is called for each match.
-			// Since we only want to replace the first, we can use a counter
-			// or simply return the replacement if it's the first match.
-			// ReplaceAllStringFunc will iterate over all matches, so we need to ensure it only replaces once.
-			// A simpler way for a single replacement is to find the first match and then replace.
-			loc := compiledPattern.FindStringIndex(quotedText)
-			if loc != nil {
-				return quotedText[:loc[0]] + compiledPattern.ReplaceAllString(quotedText[loc[0]:loc[1]], replacement) + quotedText[loc[1]:]
-			}
-			return quotedText
-		})
-		// The above logic for non-global is slightly complex. Let's simplify:
-		// if not global, just use ReplaceAllString with limit=1, but Go's regexp doesn't directly support limit.
-		// So we manually find the first match and replace it.
 		firstMatchIndex := compiledPattern.FindStringIndex(quotedText)
 		if firstMatchIndex != nil {
-			editedText = quotedText[:firstMatchIndex[0]] + compiledPattern.ReplaceAllString(quotedText[firstMatchIndex[0]:firstMatchIndex[1]], replacement) + quotedText[firstMatchIndex[1]:]
+			matchedString := quotedText[firstMatchIndex[0]:firstMatchIndex[1]]
+			if crossOut {
+				editedText = quotedText[:firstMatchIndex[0]] + fmt.Sprintf("~%s~%s", matchedString, replacement) + quotedText[firstMatchIndex[1]:]
+			} else {
+				editedText = quotedText[:firstMatchIndex[0]] + compiledPattern.ReplaceAllString(matchedString, replacement) + quotedText[firstMatchIndex[1]:]
+			}
 		} else {
 			// No match found, text remains unchanged
 			editedText = quotedText
