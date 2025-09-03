@@ -16,8 +16,8 @@ import (
 )
 
 type DownloadCommand struct {
-	mu              sync.Mutex
-	isDownloading   bool
+	mu               sync.Mutex
+	isDownloading    bool
 	lastDownloadTime time.Time
 }
 
@@ -34,13 +34,13 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 
 	// Check rate limiting
 	c.mu.Lock()
-	
+
 	// Check if download is already in progress
 	if c.isDownloading {
 		c.mu.Unlock()
 		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Warning("⏳ A download is already in progress. Please wait for it to complete."))
 	}
-	
+
 	// Check cooldown period (1 minute)
 	if !c.lastDownloadTime.IsZero() {
 		timeSinceLastDownload := time.Since(c.lastDownloadTime)
@@ -50,11 +50,11 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 			return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Warning(fmt.Sprintf("⏱️ Please wait %d seconds before downloading again.", int(remainingTime.Seconds()))))
 		}
 	}
-	
+
 	// Mark as downloading
 	c.isDownloading = true
 	c.mu.Unlock()
-	
+
 	// Ensure we mark as not downloading when done
 	defer func() {
 		c.mu.Lock()
@@ -66,7 +66,7 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 
 	url := ctx.Args[0]
 	fmt.Printf("[DOWNLOAD] Starting download for URL: %s\n", url)
-	
+
 	// We'll only send the final result, not intermediate status messages
 
 	// Create temporary directory for downloads
@@ -100,52 +100,31 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 
 	// Check if URL is YouTube
 	isYouTube := strings.Contains(url, "youtube.com") || strings.Contains(url, "youtu.be")
-	
-	if isYouTube {
-		// For YouTube, use visitor data instead of cookies
-		visitorData := os.Getenv("YOUTUBE_VISITOR_DATA")
-		if visitorData != "" {
-			fmt.Printf("[DOWNLOAD] Using YouTube visitor data for authentication\n")
-			// Add extractor args for YouTube with visitor data
-			dl = dl.ExtractorArgs("youtubetab:skip=webpage").
-				ExtractorArgs(fmt.Sprintf("youtube:player_skip=webpage,configs;visitor_data=%s", visitorData))
-		} else {
-			fmt.Printf("[DOWNLOAD] No YOUTUBE_VISITOR_DATA configured. Some content may be restricted.\n")
-		}
-	} else {
-		// For all other sites, try to use cookies if available
-		cookiesPath := os.Getenv("COOKIES_PATH")
-		if cookiesPath != "" {
-			// Check if cookies file exists
-			if _, err := os.Stat(cookiesPath); err == nil {
-				fmt.Printf("[DOWNLOAD] Using cookies from: %s\n", cookiesPath)
-				dl = dl.Cookies(cookiesPath)
-			} else {
-				fmt.Printf("[DOWNLOAD] Warning: Cookies file not found at %s\n", cookiesPath)
-			}
-		}
-	}
+
+	// For all other sites, try to use cookies if available
+	dl = dl.CookiesFromBrowser("firefox:/root/profile/")
+	dl = dl.AddHeaders(fmt.Sprintf("User-Agent:%s", os.Getenv("USER_AGENT")))
 
 	// Download the media
 	fmt.Printf("[DOWNLOAD] Running yt-dlp...\n")
 	result, err := dl.Run(context.Background(), url)
 	if err != nil {
 		fmt.Printf("[DOWNLOAD] yt-dlp failed: %v\n", err)
-		
+
 		// Check for common errors
 		errStr := err.Error()
-		
+
 		if isYouTube && (strings.Contains(errStr, "Sign in to confirm") || strings.Contains(errStr, "age")) {
-			return ctx.Handler.SendResponse(ctx.MessageInfo, 
+			return ctx.Handler.SendResponse(ctx.MessageInfo,
 				framework.Error("❌ This video is age-restricted.\n\nTo download it, set YOUTUBE_VISITOR_DATA environment variable.\nSee README for instructions."))
 		} else if strings.Contains(errStr, "This content isn't available") {
-			return ctx.Handler.SendResponse(ctx.MessageInfo, 
+			return ctx.Handler.SendResponse(ctx.MessageInfo,
 				framework.Error("❌ Content unavailable. Video may be private, deleted, or region-blocked."))
 		} else if !isYouTube && (strings.Contains(errStr, "login") || strings.Contains(errStr, "private") || strings.Contains(errStr, "authenticate")) {
-			return ctx.Handler.SendResponse(ctx.MessageInfo, 
+			return ctx.Handler.SendResponse(ctx.MessageInfo,
 				framework.Error("❌ This content requires authentication.\n\nExport cookies from your browser and set COOKIES_PATH.\nSee README for instructions."))
 		}
-		
+
 		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Download failed: %v", err)))
 	}
 

@@ -7,9 +7,31 @@ services:
     environment:
       IS_DOCKER: "true"
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-      COOKIES_PATH: ${COOKIES_PATH}
     volumes:
       - whatsapp-go:/data
-
+      - firefox-config:/root
+  firefox:
+    image: jlesage/firefox:latest
+    container_name: firefox
+    environment:
+      - USER_ID=1000
+      - GROUP_ID=1000
+      - TZ=Etc/UTC
+      - DISPLAY_WIDTH=800
+      - DISPLAY_HEIGHT=600
+      - VNC_PASSWORD=password
+      # Enable kiosk mode for a more focused experience
+      # - FF_KIOSK=1
+    volumes:
+      - firefox-config:/config
+    ports:
+      - "5800:5800" # Web access
+      # - "5900:5900" # VNC access
+    shm_size: "2gb" # Firefox needs more shared memory
+    restart: unless-stopped
+    # Allow membarrier system call for Firefox
+    security_opt:
+      - seccomp:unconfined
 volumes:
   whatsapp-go:
+  firefox-config:
