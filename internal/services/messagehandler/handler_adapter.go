@@ -63,12 +63,8 @@ func (a *HandlerAdapter) SendImage(msgInfo types.MessageInfo, upload framework.U
 		},
 	}
 	
-	// If the message is from us, edit it instead of sending a new one
-	if msgInfo.IsFromMe {
-		return a.WhatsMeowEventHandler.editMessageContent(msgInfo.Chat, msgInfo.ID, caption, msg)
-	}
-	
-	// Otherwise send a new message
+	// If the message is from us, we can't edit a media message, so we'll send a new one
+	// Edit operations only work for text messages, not media
 	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
 	return err
 }
@@ -88,12 +84,8 @@ func (a *HandlerAdapter) SendVideo(msgInfo types.MessageInfo, upload framework.U
 		},
 	}
 	
-	// If the message is from us, edit it instead of sending a new one
-	if msgInfo.IsFromMe {
-		return a.WhatsMeowEventHandler.editMessageContent(msgInfo.Chat, msgInfo.ID, caption, msg)
-	}
-	
-	// Otherwise send a new message
+	// If the message is from us, we can't edit a media message, so we'll send a new one
+	// Edit operations only work for text messages, not media
 	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
 	return err
 }
@@ -114,12 +106,8 @@ func (a *HandlerAdapter) SendDocument(msgInfo types.MessageInfo, upload framewor
 		},
 	}
 	
-	// If the message is from us, edit it instead of sending a new one
-	if msgInfo.IsFromMe {
-		return a.WhatsMeowEventHandler.editMessageContent(msgInfo.Chat, msgInfo.ID, caption, msg)
-	}
-	
-	// Otherwise send a new message
+	// If the message is from us, we can't edit a media message, so we'll send a new one
+	// Edit operations only work for text messages, not media
 	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
 	return err
 }

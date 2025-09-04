@@ -268,56 +268,40 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	// Prepare caption
 	caption := fmt.Sprintf("📥 Downloaded from: %s", url)
 
-	// Upload based on type
+	// Send based on type using the media uploader's UploadAndSend methods
 	uploader := framework.NewMediaUploader(ctx.Handler.GetClient())
 	extension := strings.ToLower(filepath.Ext(outputFile))
 	fmt.Printf("[DOWNLOAD] File extension: %s\n", extension)
 
 	if extension == ".mp4" || extension == ".webm" || extension == ".mkv" || extension == ".avi" {
-		fmt.Printf("[DOWNLOAD] Uploading as video...\n")
-		// Upload as video
-		resp, err := uploader.UploadVideo(ctx.Context, data)
+		fmt.Printf("[DOWNLOAD] Uploading and sending as video...\n")
+		// Upload and send as video
+		err := uploader.UploadAndSendVideo(ctx.Context, ctx.MessageInfo.Chat, data, caption)
 		if err != nil {
-			fmt.Printf("[DOWNLOAD] Video upload failed: %v\n", err)
-			errorMsg := framework.Error(fmt.Sprintf("Failed to upload video: %v", err))
+			fmt.Printf("[DOWNLOAD] Video upload/send failed: %v\n", err)
+			errorMsg := framework.Error(fmt.Sprintf("Failed to upload/send video: %v", err))
 			ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
 			return nil
-		}
-		fmt.Printf("[DOWNLOAD] Video uploaded successfully: URL=%s, DirectPath=%s, FileLength=%d\n", resp.URL, resp.DirectPath, resp.FileLength)
-
-		// Send video with caption by editing the original message
-		err = ctx.Handler.SendVideo(ctx.MessageInfo, resp, caption)
-		if err != nil {
-			fmt.Printf("[DOWNLOAD] Failed to send video message: %v\n", err)
-			return err
 		}
 		fmt.Printf("[DOWNLOAD] Video sent successfully\n")
 		return nil
 	} else {
-		// Upload as image or document
+		// Upload and send as image or document
 		if isImageFile(outputFile) {
-			resp, err := uploader.UploadImage(ctx.Context, data)
+			err := uploader.UploadAndSendImage(ctx.Context, ctx.MessageInfo.Chat, data, caption)
 			if err != nil {
-				errorMsg := framework.Error(fmt.Sprintf("Failed to upload image: %v", err))
+				errorMsg := framework.Error(fmt.Sprintf("Failed to upload/send image: %v", err))
 				ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
 				return nil
-			}
-			err = ctx.Handler.SendImage(ctx.MessageInfo, resp, caption)
-			if err != nil {
-				return err
 			}
 			return nil
 		} else {
 			// Send as document if not recognized media type
-			resp, err := uploader.UploadDocument(ctx.Context, data, filepath.Base(outputFile))
+			err := uploader.UploadAndSendDocument(ctx.Context, ctx.MessageInfo.Chat, data, filepath.Base(outputFile), caption)
 			if err != nil {
-				errorMsg := framework.Error(fmt.Sprintf("Failed to upload document: %v", err))
+				errorMsg := framework.Error(fmt.Sprintf("Failed to upload/send document: %v", err))
 				ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
 				return nil
-			}
-			err = ctx.Handler.SendDocument(ctx.MessageInfo, resp, caption)
-			if err != nil {
-				return err
 			}
 			return nil
 		}
