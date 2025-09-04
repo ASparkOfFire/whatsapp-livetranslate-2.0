@@ -67,7 +67,12 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	url := ctx.Args[0]
 	fmt.Printf("[DOWNLOAD] Starting download for URL: %s\n", url)
 
-	// We'll only send the final result, not intermediate status messages
+	// Send initial processing message that we'll edit later
+	initialMsg := framework.Processing("Starting download...")
+	err := ctx.Handler.SendResponse(ctx.MessageInfo, initialMsg)
+	if err != nil {
+		fmt.Printf("[DOWNLOAD] Failed to send initial message: %v\n", err)
+	}
 
 	// Create temporary directory for downloads
 	tempDir, err := os.MkdirTemp("", "whatsapp-download-*")
@@ -77,13 +82,19 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 		c.mu.Lock()
 		c.isDownloading = false
 		c.mu.Unlock()
-		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Failed to create temp directory"))
+		errorMsg := framework.Error("Failed to create temp directory")
+		ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+		return nil
 	}
 	defer func() {
 		fmt.Printf("[DOWNLOAD] Cleaning up temp directory: %s\n", tempDir)
 		os.RemoveAll(tempDir)
 	}()
 	fmt.Printf("[DOWNLOAD] Created temp directory: %s\n", tempDir)
+
+	// Update message to show downloading
+	processingMsg := framework.Processing("Downloading media...")
+	ctx.Handler.EditMessage(ctx.MessageInfo, processingMsg)
 
 	// Configure output template
 	outputTemplate := filepath.Join(tempDir, "download.%(ext)s")
@@ -114,18 +125,19 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 		// Check for common errors
 		errStr := err.Error()
 
+		var errorMsg string
 		if isYouTube && (strings.Contains(errStr, "Sign in to confirm") || strings.Contains(errStr, "age")) {
-			return ctx.Handler.SendResponse(ctx.MessageInfo,
-				framework.Error("❌ This video is age-restricted.\n\nTo download it, set YOUTUBE_VISITOR_DATA environment variable.\nSee README for instructions."))
+			errorMsg = framework.Error("❌ This video is age-restricted.\n\nTo download it, set YOUTUBE_VISITOR_DATA environment variable.\nSee README for instructions.")
 		} else if strings.Contains(errStr, "This content isn't available") {
-			return ctx.Handler.SendResponse(ctx.MessageInfo,
-				framework.Error("❌ Content unavailable. Video may be private, deleted, or region-blocked."))
+			errorMsg = framework.Error("❌ Content unavailable. Video may be private, deleted, or region-blocked.")
 		} else if !isYouTube && (strings.Contains(errStr, "login") || strings.Contains(errStr, "private") || strings.Contains(errStr, "authenticate")) {
-			return ctx.Handler.SendResponse(ctx.MessageInfo,
-				framework.Error("❌ This content requires authentication.\n\nExport cookies from your browser and set COOKIES_PATH.\nSee README for instructions."))
+			errorMsg = framework.Error("❌ This content requires authentication.\n\nExport cookies from your browser and set COOKIES_PATH.\nSee README for instructions.")
+		} else {
+			errorMsg = framework.Error(fmt.Sprintf("Download failed: %v", err))
 		}
 
-		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Download failed: %v", err)))
+		ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+		return nil
 	}
 
 	if result != nil {
@@ -141,11 +153,17 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	// Wait a moment for file to be fully written
 	time.Sleep(500 * time.Millisecond)
 
+	// Update message to show processing
+	processingMsg = framework.Processing("Processing downloaded file...")
+	ctx.Handler.EditMessage(ctx.MessageInfo, processingMsg)
+
 	// Find the downloaded file
 	files, err := filepath.Glob(filepath.Join(tempDir, "download.*"))
 	if err != nil {
 		fmt.Printf("[DOWNLOAD] Glob error: %v\n", err)
-		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Error finding downloaded file"))
+		errorMsg := framework.Error("Error finding downloaded file")
+		ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+		return nil
 	}
 
 	fmt.Printf("[DOWNLOAD] Found %d files in temp directory\n", len(files))
@@ -181,7 +199,9 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 			for _, f := range allFiles {
 				fmt.Printf("[DOWNLOAD]   - %s\n", f.Name())
 			}
-			return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Downloaded file not found"))
+			errorMsg := framework.Error("Downloaded file not found")
+			ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+			return nil
 		}
 	}
 	outputFile := files[0]
@@ -191,7 +211,9 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	fileInfo, err := os.Stat(outputFile)
 	if err != nil {
 		fmt.Printf("[DOWNLOAD] Failed to stat file: %v\n", err)
-		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Failed to access downloaded file"))
+		errorMsg := framework.Error("Failed to access downloaded file")
+		ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+		return nil
 	}
 	fmt.Printf("[DOWNLOAD] File size: %d bytes (%.2f MB)\n", fileInfo.Size(), float64(fileInfo.Size())/(1024*1024))
 
@@ -199,21 +221,48 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	data, err := os.ReadFile(outputFile)
 	if err != nil {
 		fmt.Printf("[DOWNLOAD] Failed to read file: %v\n", err)
-		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Failed to read downloaded file"))
+		errorMsg := framework.Error("Failed to read downloaded file")
+		ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+		return nil
 	}
 	fmt.Printf("[DOWNLOAD] Read %d bytes from file\n", len(data))
 
 	// Check if file is actually empty
 	if len(data) == 0 {
 		fmt.Printf("[DOWNLOAD] ERROR: File is empty!\n")
-		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Downloaded file is empty"))
+		errorMsg := framework.Error("Downloaded file is empty")
+		ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+		return nil
 	}
 
 	// Check file size (WhatsApp has limits)
 	const maxSize = 16 * 1024 * 1024 // 16MB limit for WhatsApp
 	if len(data) > maxSize {
 		fmt.Printf("[DOWNLOAD] File too large: %d bytes\n", len(data))
-		return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("File too large (%.1f MB). Maximum size is 16 MB", float64(len(data))/(1024*1024))))
+		// For large files, we'll send as document instead
+		fmt.Printf("[DOWNLOAD] File exceeds 16MB limit, sending as document...\n")
+		
+		// Prepare caption with size info
+		caption := fmt.Sprintf("📥 Downloaded from: %s\n\n📎 File is %.1f MB (exceeds 16MB limit for media)", url, float64(len(data))/(1024*1024))
+
+		// Upload as document
+		uploader := framework.NewMediaUploader(ctx.Handler.GetClient())
+		resp, err := uploader.UploadDocument(ctx.Context, data, filepath.Base(outputFile))
+		if err != nil {
+			fmt.Printf("[DOWNLOAD] Document upload failed: %v\n", err)
+			errorMsg := framework.Error(fmt.Sprintf("Failed to upload document: %v", err))
+			ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+			return nil
+		}
+
+		// Send document with caption
+		err = ctx.Handler.SendDocument(ctx.MessageInfo, resp, caption)
+		if err != nil {
+			fmt.Printf("[DOWNLOAD] Failed to send document message: %v\n", err)
+			return err
+		}
+		fmt.Printf("[DOWNLOAD] Large file sent as document successfully\n")
+		return nil
 	}
 
 	// Prepare caption
@@ -230,11 +279,13 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 		resp, err := uploader.UploadVideo(ctx.Context, data)
 		if err != nil {
 			fmt.Printf("[DOWNLOAD] Video upload failed: %v\n", err)
-			return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Failed to upload video: %v", err)))
+			errorMsg := framework.Error(fmt.Sprintf("Failed to upload video: %v", err))
+			ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+			return nil
 		}
 		fmt.Printf("[DOWNLOAD] Video uploaded successfully: URL=%s, DirectPath=%s, FileLength=%d\n", resp.URL, resp.DirectPath, resp.FileLength)
 
-		// Send video with caption
+		// Send video with caption by editing the original message
 		err = ctx.Handler.SendVideo(ctx.MessageInfo, resp, caption)
 		if err != nil {
 			fmt.Printf("[DOWNLOAD] Failed to send video message: %v\n", err)
@@ -247,16 +298,28 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 		if isImageFile(outputFile) {
 			resp, err := uploader.UploadImage(ctx.Context, data)
 			if err != nil {
-				return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Failed to upload image: %v", err)))
+				errorMsg := framework.Error(fmt.Sprintf("Failed to upload image: %v", err))
+				ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+				return nil
 			}
-			return ctx.Handler.SendImage(ctx.MessageInfo, resp, caption)
+			err = ctx.Handler.SendImage(ctx.MessageInfo, resp, caption)
+			if err != nil {
+				return err
+			}
+			return nil
 		} else {
 			// Send as document if not recognized media type
 			resp, err := uploader.UploadDocument(ctx.Context, data, filepath.Base(outputFile))
 			if err != nil {
-				return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Failed to upload document: %v", err)))
+				errorMsg := framework.Error(fmt.Sprintf("Failed to upload document: %v", err))
+				ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+				return nil
 			}
-			return ctx.Handler.SendDocument(ctx.MessageInfo, resp, caption)
+			err = ctx.Handler.SendDocument(ctx.MessageInfo, resp, caption)
+			if err != nil {
+				return err
+			}
+			return nil
 		}
 	}
 }

@@ -49,6 +49,7 @@ func (a *HandlerAdapter) SendMedia(msgInfo types.MessageInfo, mediaType framewor
 }
 
 func (a *HandlerAdapter) SendImage(msgInfo types.MessageInfo, upload framework.UploadResponse, caption string) error {
+	// Create the image message
 	msg := &waProto.Message{
 		ImageMessage: &waProto.ImageMessage{
 			Caption:       proto.String(caption),
@@ -61,11 +62,19 @@ func (a *HandlerAdapter) SendImage(msgInfo types.MessageInfo, upload framework.U
 			FileLength:    proto.Uint64(upload.FileLength),
 		},
 	}
+	
+	// If the message is from us, edit it instead of sending a new one
+	if msgInfo.IsFromMe {
+		return a.WhatsMeowEventHandler.editMessageContent(msgInfo.Chat, msgInfo.ID, caption, msg)
+	}
+	
+	// Otherwise send a new message
 	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
 	return err
 }
 
 func (a *HandlerAdapter) SendVideo(msgInfo types.MessageInfo, upload framework.UploadResponse, caption string) error {
+	// Create the video message
 	msg := &waProto.Message{
 		VideoMessage: &waProto.VideoMessage{
 			Caption:       proto.String(caption),
@@ -78,11 +87,19 @@ func (a *HandlerAdapter) SendVideo(msgInfo types.MessageInfo, upload framework.U
 			FileLength:    proto.Uint64(upload.FileLength),
 		},
 	}
+	
+	// If the message is from us, edit it instead of sending a new one
+	if msgInfo.IsFromMe {
+		return a.WhatsMeowEventHandler.editMessageContent(msgInfo.Chat, msgInfo.ID, caption, msg)
+	}
+	
+	// Otherwise send a new message
 	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
 	return err
 }
 
 func (a *HandlerAdapter) SendDocument(msgInfo types.MessageInfo, upload framework.UploadResponse, caption string) error {
+	// Create the document message
 	msg := &waProto.Message{
 		DocumentMessage: &waProto.DocumentMessage{
 			Caption:       proto.String(caption),
@@ -96,6 +113,13 @@ func (a *HandlerAdapter) SendDocument(msgInfo types.MessageInfo, upload framewor
 			FileLength:    proto.Uint64(upload.FileLength),
 		},
 	}
+	
+	// If the message is from us, edit it instead of sending a new one
+	if msgInfo.IsFromMe {
+		return a.WhatsMeowEventHandler.editMessageContent(msgInfo.Chat, msgInfo.ID, caption, msg)
+	}
+	
+	// Otherwise send a new message
 	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
 	return err
 }
