@@ -44,8 +44,8 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 	// Check cooldown period (1 minute)
 	if !c.lastDownloadTime.IsZero() {
 		timeSinceLastDownload := time.Since(c.lastDownloadTime)
-		if timeSinceLastDownload < 1*time.Minute {
-			remainingTime := 1*time.Minute - timeSinceLastDownload
+		if timeSinceLastDownload < 5*time.Second {
+			remainingTime := 5*time.Second - timeSinceLastDownload
 			c.mu.Unlock()
 			return ctx.Handler.SendResponse(ctx.MessageInfo, framework.Warning(fmt.Sprintf("⏱️ Please wait %d seconds before downloading again.", int(remainingTime.Seconds()))))
 		}
@@ -241,7 +241,7 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 		fmt.Printf("[DOWNLOAD] File too large: %d bytes\n", len(data))
 		// For large files, we'll send as document instead
 		fmt.Printf("[DOWNLOAD] File exceeds 16MB limit, sending as document...\n")
-		
+
 		// Prepare caption with size info
 		caption := fmt.Sprintf("📥 Downloaded from: %s\n\n📎 File is %.1f MB (exceeds 16MB limit for media)", url, float64(len(data))/(1024*1024))
 
