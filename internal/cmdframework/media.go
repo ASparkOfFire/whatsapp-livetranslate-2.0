@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
+	"strings"
 	
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/types"
@@ -30,6 +32,10 @@ func (m *MediaUploader) UploadVideo(ctx context.Context, videoData []byte) (Uplo
 }
 
 func (m *MediaUploader) UploadDocument(ctx context.Context, docData []byte, filename string) (UploadResponse, error) {
+	// The whatsmeow library doesn't directly support setting MIME types for documents
+	// The MIME type is determined by WhatsApp based on the file content
+	// We'll pass the filename which helps with recognition
+	
 	return m.client.Upload(ctx, docData, MediaDocument)
 }
 
@@ -85,11 +91,25 @@ func (m *MediaUploader) UploadAndSendDocument(ctx context.Context, to types.JID,
 		return fmt.Errorf("failed to upload document: %w", err)
 	}
 	
+	// Set MIME type based on file extension
+	mimeType := "application/octet-stream"
+	ext := strings.ToLower(filepath.Ext(filename))
+	switch ext {
+	case ".mp4", ".mov", ".avi", ".mkv":
+		mimeType = "video/" + strings.TrimPrefix(ext, ".")
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp":
+		mimeType = "image/" + strings.TrimPrefix(ext, ".")
+	case ".pdf":
+		mimeType = "application/pdf"
+	case ".txt":
+		mimeType = "text/plain"
+	}
+	
 	msg := &waProto.Message{
 		DocumentMessage: &waProto.DocumentMessage{
 			Caption:       proto.String(caption),
 			FileName:      proto.String(filename),
-			Mimetype:      proto.String("application/octet-stream"),
+			Mimetype:      proto.String(mimeType),
 			URL:           proto.String(uploaded.URL),
 			DirectPath:    proto.String(uploaded.DirectPath),
 			MediaKey:      uploaded.MediaKey,

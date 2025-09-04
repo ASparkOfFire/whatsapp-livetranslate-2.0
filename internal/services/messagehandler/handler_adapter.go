@@ -41,7 +41,8 @@ func (a *HandlerAdapter) SendMedia(msgInfo types.MessageInfo, mediaType framewor
 	case framework.MediaVideo:
 		return a.mediaUploader.UploadAndSendVideo(ctx, msgInfo.Chat, data, caption)
 	case framework.MediaDocument:
-		filename := fmt.Sprintf("document_%d", msgInfo.Timestamp.Unix())
+		// Use a more descriptive filename with .mp4 extension for videos
+		filename := fmt.Sprintf("document_%d.mp4", msgInfo.Timestamp.Unix())
 		return a.mediaUploader.UploadAndSendDocument(ctx, msgInfo.Chat, data, filename, caption)
 	default:
 		return fmt.Errorf("unsupported media type: %v", mediaType)
@@ -95,8 +96,8 @@ func (a *HandlerAdapter) SendDocument(msgInfo types.MessageInfo, upload framewor
 	msg := &waProto.Message{
 		DocumentMessage: &waProto.DocumentMessage{
 			Caption:       proto.String(caption),
-			FileName:      proto.String("document"),
-			Mimetype:      proto.String("application/octet-stream"),
+			FileName:      proto.String("document.mp4"), // Default to .mp4 for video documents
+			Mimetype:      proto.String("video/mp4"),    // Set proper MIME type for MP4
 			URL:           proto.String(upload.URL),
 			DirectPath:    proto.String(upload.DirectPath),
 			MediaKey:      upload.MediaKey,

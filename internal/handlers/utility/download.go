@@ -245,9 +245,14 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 		// Prepare caption with size info
 		caption := fmt.Sprintf("📥 Downloaded from: %s\n\n📎 File is %.1f MB (exceeds 16MB limit for media)", url, float64(len(data))/(1024*1024))
 
-		// Upload as document
+		// Upload as document with proper filename to preserve extension
+		filename := filepath.Base(outputFile)
+		if filename == "" || filename == "." {
+			filename = fmt.Sprintf("video_%d.mp4", time.Now().Unix())
+		}
+		
 		uploader := framework.NewMediaUploader(ctx.Handler.GetClient())
-		resp, err := uploader.UploadDocument(ctx.Context, data, filepath.Base(outputFile))
+		resp, err := uploader.UploadDocument(ctx.Context, data, filename)
 		if err != nil {
 			fmt.Printf("[DOWNLOAD] Document upload failed: %v\n", err)
 			errorMsg := framework.Error(fmt.Sprintf("Failed to upload document: %v", err))
@@ -286,26 +291,36 @@ func (c *DownloadCommand) Execute(ctx *framework.Context) error {
 		fmt.Printf("[DOWNLOAD] Video sent successfully\n")
 		return nil
 	} else {
-		// Upload and send as image or document
-		if isImageFile(outputFile) {
-			err := uploader.UploadAndSendImage(ctx.Context, ctx.MessageInfo.Chat, data, caption)
-			if err != nil {
-				errorMsg := framework.Error(fmt.Sprintf("Failed to upload/send image: %v", err))
-				ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+			// Upload and send as image or document
+			if isImageFile(outputFile) {
+				err := uploader.UploadAndSendImage(ctx.Context, ctx.MessageInfo.Chat, data, caption)
+				if err != nil {
+					errorMsg := framework.Error(fmt.Sprintf("Failed to upload/send image: %v", err))
+					ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+					return nil
+				}
+				return nil
+			} else {
+				// Send as document if not recognized media type
+				// Preserve the original filename to maintain file type recognition
+				filename := filepath.Base(outputFile)
+				if filename == "" || filename == "." {
+					// If we still can't determine the filename, use a generic one with proper extension
+					ext := filepath.Ext(outputFile)
+					if ext == "" {
+						ext = ".mp4" // Default to MP4 for video files
+					}
+					filename = fmt.Sprintf("media_%d%s", time.Now().Unix(), ext)
+				}
+				err := uploader.UploadAndSendDocument(ctx.Context, ctx.MessageInfo.Chat, data, filename, caption)
+				if err != nil {
+					errorMsg := framework.Error(fmt.Sprintf("Failed to upload/send document: %v", err))
+					ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
+					return nil
+				}
 				return nil
 			}
-			return nil
-		} else {
-			// Send as document if not recognized media type
-			err := uploader.UploadAndSendDocument(ctx.Context, ctx.MessageInfo.Chat, data, filepath.Base(outputFile), caption)
-			if err != nil {
-				errorMsg := framework.Error(fmt.Sprintf("Failed to upload/send document: %v", err))
-				ctx.Handler.EditMessage(ctx.MessageInfo, errorMsg)
-				return nil
-			}
-			return nil
 		}
-	}
 }
 
 func (c *DownloadCommand) Metadata() *framework.Metadata {
