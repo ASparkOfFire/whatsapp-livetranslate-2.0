@@ -76,16 +76,16 @@ type ErrorResponse struct {
 func (e ErrorResponse) String() string {
 	builder := NewResponseBuilder()
 	builder.AddLine(fmt.Sprintf("❌ *Error: %s*", e.Code))
-	
+
 	if e.Message != "" {
 		builder.AddLine(e.Message)
 	}
-	
+
 	if e.Details != "" {
 		builder.AddEmptyLine()
 		builder.AddLine(e.Details)
 	}
-	
+
 	return builder.Build()
 }
 
@@ -132,7 +132,7 @@ var Templates = struct {
 		template: "❌ Missing required parameter: %s\nUsage: `%s`",
 	},
 	InvalidParameter: Template{
-		name:     "InvalidParameter",  
+		name:     "InvalidParameter",
 		template: "❌ Invalid %s: %s\nExpected: %s",
 	},
 	PermissionDenied: Template{

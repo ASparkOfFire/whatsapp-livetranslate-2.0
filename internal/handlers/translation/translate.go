@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 	framework "github.com/asparkoffire/whatsapp-livetranslate-go/internal/cmdframework"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/utils"
 	"github.com/pemistahl/lingua-go"
 	waProto "go.mau.fi/whatsmeow/proto/waE2E"
@@ -71,7 +71,7 @@ func (c *TranslateCommand) handleMediaCaptionTranslation(ctx *framework.Context)
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Could not detect source language"))
 		return true
 	}
-	
+
 	fmt.Printf("[TRANSLATE] Media caption translation: detected=%s, target=%s, text=%s\n", detectedLang, c.langCode, textToTranslate)
 
 	translated, err := ctx.Handler.GetTranslator().TranslateText(
@@ -80,7 +80,7 @@ func (c *TranslateCommand) handleMediaCaptionTranslation(ctx *framework.Context)
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Translation failed: %v", err)))
 		return true
 	}
-	
+
 	fmt.Printf("[TRANSLATE] Media caption translated: %s\n", translated)
 
 	// For media messages from the user, we need to edit the caption
@@ -120,7 +120,7 @@ func (c *TranslateCommand) handleQuotedMessageTranslation(ctx *framework.Context
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Could not detect source language"))
 		return true
 	}
-	
+
 	fmt.Printf("[TRANSLATE] Quoted message translation: detected=%s, target=%s, text=%s\n", detectedLang, c.langCode, quotedText)
 
 	translated, err := ctx.Handler.GetTranslator().TranslateText(
@@ -129,7 +129,7 @@ func (c *TranslateCommand) handleQuotedMessageTranslation(ctx *framework.Context
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Translation failed: %v", err)))
 		return true
 	}
-	
+
 	fmt.Printf("[TRANSLATE] Translation result: %s\n", translated)
 
 	quotedMsgID := ctx.Message.GetExtendedTextMessage().GetContextInfo().GetStanzaID()
@@ -163,7 +163,7 @@ func (c *TranslateCommand) handleInlineTranslation(ctx *framework.Context) bool 
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error("Could not detect source language"))
 		return false
 	}
-	
+
 	fmt.Printf("[TRANSLATE] Inline translation: detected=%s, target=%s, text=%s\n", detectedLang, c.langCode, textToTranslate)
 
 	translated, err := ctx.Handler.GetTranslator().TranslateText(
@@ -172,7 +172,7 @@ func (c *TranslateCommand) handleInlineTranslation(ctx *framework.Context) bool 
 		ctx.Handler.SendResponse(ctx.MessageInfo, framework.Error(fmt.Sprintf("Translation failed: %v", err)))
 		return false
 	}
-	
+
 	fmt.Printf("[TRANSLATE] Translation result: %s\n", translated)
 
 	ctx.Handler.SendResponse(ctx.MessageInfo, translated)

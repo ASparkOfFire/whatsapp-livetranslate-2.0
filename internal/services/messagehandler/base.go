@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
-	
+
 	framework "github.com/asparkoffire/whatsapp-livetranslate-go/internal/cmdframework"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/memegenerator"
@@ -31,12 +31,12 @@ func NewWhatsMeowEventHandler(client *whatsmeow.Client, detector services.LangDe
 		memeGenerator:   memegenerator.NewMemeGenerator(),
 		commandRegistry: framework.NewRegistry(),
 	}
-	
+
 	// Initialize all commands
 	if err := handler.InitializeCommands(); err != nil {
 		return nil, err
 	}
-	
+
 	if handler.client.Store.ID == nil {
 		if err := handler.setupQRLogin(); err != nil {
 			return nil, err

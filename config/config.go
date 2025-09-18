@@ -10,6 +10,8 @@ import (
 
 type config struct {
 	GeminiAPIKey string `validate:"required"`
+	HIBPToken    string // HIBP API token for dark web searches
+	HIBPURL      string
 }
 
 var (
@@ -25,4 +27,6 @@ func init() {
 	}
 
 	AppConfig.GeminiAPIKey = os.Getenv("GEMINI_API_KEY")
+	AppConfig.HIBPToken = os.Getenv("HIBP_TOKEN")
+	AppConfig.HIBPURL = os.Getenv("HIBP_URL")
 }

@@ -130,20 +130,7 @@ func getSupportedLanguages() string {
 
 const HelpMessage string = `WhatsApp Live Translation and Meme bot by Kabir Kalsi (https://github.com/ASparkOfFire)
 
-Available Commands:
-
-*/lang* - Translate from one language to another, works inline, quoted, and in media captions
-*/help* - Show this help message
-*/supportedlangs* - Show supported languages
-*/randmoji* [duration] - Send random emojis (duration 1-10, default 10)
-*/haha* - Send laughing emojis
-*/ping* - Check bot response time
-*/setmodel* [model] - Set translation model (gemini-1.5-flash, gemini-2.0-flash, gemini-2.5-flash)
-*/getmodel* - Get current translation model
-*/settemp* [value] - Set temperature (0.0-1.0)
-*/gettemp* - Get current temperature
-*/image* [prompt] - Generate an image using Gemini AI
-*/meme* [subreddit] - Get a random meme (optionally from a specific subreddit)
+Send /help to see all available commands.
 
 Example: /en Hello world
 Supported languages: en, ru, pa, hi`

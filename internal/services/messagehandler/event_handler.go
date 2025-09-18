@@ -78,7 +78,6 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 	}
 }
 
-
 // InitializeCommands sets up all commands in the registry
 func (h *WhatsMeowEventHandler) InitializeCommands() error {
 	registry := h.commandRegistry
@@ -104,6 +103,10 @@ func (h *WhatsMeowEventHandler) InitializeCommands() error {
 
 	if err := registry.Register(utility.NewSedCommand()); err != nil {
 		return fmt.Errorf("failed to register sed command: %w", err)
+	}
+
+	if err := registry.Register(utility.NewHIBPCommand()); err != nil {
+		return fmt.Errorf("failed to register hibp command: %w", err)
 	}
 
 	// Register admin commands
@@ -146,7 +149,7 @@ func (h *WhatsMeowEventHandler) InitializeCommands() error {
 	}
 
 	// Apply middleware to commands that need owner permissions
-	ownerCommands := []string{"ping", "setmodel", "settemp", "image", "meme", "randmoji", "haha", "download"}
+	ownerCommands := []string{"ping", "setmodel", "settemp", "image", "meme", "randmoji", "haha", "download", "hibp"}
 	for _, cmdName := range ownerCommands {
 		if cmd, exists := registry.Get(cmdName); exists {
 			wrappedCmd := framework.WithMiddleware(cmd, framework.RequireOwner())

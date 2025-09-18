@@ -22,8 +22,8 @@ func (c *SimpleCommand) Metadata() *Metadata {
 }
 
 type ParameterizedCommand struct {
-	Meta      Metadata
-	Handler   func(ctx *Context, params map[string]interface{}) error
+	Meta    Metadata
+	Handler func(ctx *Context, params map[string]interface{}) error
 }
 
 func (c *ParameterizedCommand) Execute(ctx *Context) error {
@@ -31,7 +31,7 @@ func (c *ParameterizedCommand) Execute(ctx *Context) error {
 	if err != nil {
 		return ctx.Handler.SendResponse(ctx.MessageInfo, fmt.Sprintf("❌ %s", err.Error()))
 	}
-	
+
 	return c.Handler(ctx, params)
 }
 
@@ -41,10 +41,10 @@ func (c *ParameterizedCommand) Metadata() *Metadata {
 
 func (c *ParameterizedCommand) parseParameters(ctx *Context) (map[string]interface{}, error) {
 	params := make(map[string]interface{})
-	
+
 	for i, param := range c.Meta.Parameters {
 		var value string
-		
+
 		if i < len(ctx.Args) {
 			value = ctx.Args[i]
 		} else if param.Required {
@@ -55,21 +55,21 @@ func (c *ParameterizedCommand) parseParameters(ctx *Context) (map[string]interfa
 		} else {
 			continue
 		}
-		
+
 		if param.Validator != nil {
 			if err := param.Validator(value); err != nil {
 				return nil, fmt.Errorf("invalid %s: %v", param.Name, err)
 			}
 		}
-		
+
 		parsedValue, err := parseValue(value, param.Type)
 		if err != nil {
 			return nil, fmt.Errorf("invalid %s: %v", param.Name, err)
 		}
-		
+
 		params[param.Name] = parsedValue
 	}
-	
+
 	return params, nil
 }
 
@@ -92,8 +92,8 @@ func parseValue(value string, typ ParameterType) (interface{}, error) {
 }
 
 type MediaCommand struct {
-	Meta           Metadata
-	GenerateMedia  func(ctx *Context) ([]byte, MediaType, string, error)
+	Meta          Metadata
+	GenerateMedia func(ctx *Context) ([]byte, MediaType, string, error)
 }
 
 func (c *MediaCommand) Execute(ctx *Context) error {
@@ -101,7 +101,7 @@ func (c *MediaCommand) Execute(ctx *Context) error {
 	if err != nil {
 		return ctx.Handler.SendResponse(ctx.MessageInfo, fmt.Sprintf("❌ %s", err.Error()))
 	}
-	
+
 	return ctx.Handler.SendMedia(ctx.MessageInfo, mediaType, data, caption)
 }
 
@@ -147,26 +147,26 @@ func RequireOwner() Middleware {
 
 func RateLimit(perMinute int) Middleware {
 	lastUsed := make(map[string]time.Time)
-	
+
 	return func(next Command) Command {
 		return &middlewareCommand{
 			next: next,
 			fn: func(ctx *Context, next Command) error {
 				key := ctx.MessageInfo.Sender.String()
 				now := time.Now()
-				
+
 				if last, exists := lastUsed[key]; exists {
 					elapsed := now.Sub(last)
 					minInterval := time.Minute / time.Duration(perMinute)
-					
+
 					if elapsed < minInterval {
 						remaining := minInterval - elapsed
-						return ctx.Handler.SendResponse(ctx.MessageInfo, 
-							fmt.Sprintf("⏱️ Please wait %d seconds before using this command again", 
+						return ctx.Handler.SendResponse(ctx.MessageInfo,
+							fmt.Sprintf("⏱️ Please wait %d seconds before using this command again",
 								int(remaining.Seconds())))
 					}
 				}
-				
+
 				lastUsed[key] = now
 				return next.Execute(ctx)
 			},

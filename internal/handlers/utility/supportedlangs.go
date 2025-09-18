@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 	framework "github.com/asparkoffire/whatsapp-livetranslate-go/internal/cmdframework"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 )
 
 type SupportedLangsCommand struct{}
