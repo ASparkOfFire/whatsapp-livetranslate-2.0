@@ -3,14 +3,14 @@ package messagehandler
 import (
 	"context"
 	"fmt"
-	
+
 	framework "github.com/asparkoffire/whatsapp-livetranslate-go/internal/cmdframework"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/memegenerator"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/utils"
 	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/types"
 	waProto "go.mau.fi/whatsmeow/proto/waE2E"
+	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -23,7 +23,7 @@ type HandlerAdapter struct {
 func NewHandlerAdapter(h *WhatsMeowEventHandler) *HandlerAdapter {
 	return &HandlerAdapter{
 		WhatsMeowEventHandler: h,
-		mediaUploader: framework.NewMediaUploader(&ClientAdapter{client: h.client}),
+		mediaUploader:         framework.NewMediaUploader(&ClientAdapter{client: h.client}),
 	}
 }
 
@@ -34,7 +34,7 @@ func (a *HandlerAdapter) SendResponse(msgInfo types.MessageInfo, text string) er
 
 func (a *HandlerAdapter) SendMedia(msgInfo types.MessageInfo, mediaType framework.MediaType, data []byte, caption string) error {
 	ctx := context.Background()
-	
+
 	switch mediaType {
 	case framework.MediaImage:
 		return a.mediaUploader.UploadAndSendImage(ctx, msgInfo.Chat, data, caption)
@@ -63,7 +63,7 @@ func (a *HandlerAdapter) SendImage(msgInfo types.MessageInfo, upload framework.U
 			FileLength:    proto.Uint64(upload.FileLength),
 		},
 	}
-	
+
 	// If the message is from us, we can't edit a media message, so we'll send a new one
 	// Edit operations only work for text messages, not media
 	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
@@ -84,7 +84,7 @@ func (a *HandlerAdapter) SendVideo(msgInfo types.MessageInfo, upload framework.U
 			FileLength:    proto.Uint64(upload.FileLength),
 		},
 	}
-	
+
 	// If the message is from us, we can't edit a media message, so we'll send a new one
 	// Edit operations only work for text messages, not media
 	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
@@ -106,7 +106,7 @@ func (a *HandlerAdapter) SendDocument(msgInfo types.MessageInfo, upload framewor
 			FileLength:    proto.Uint64(upload.FileLength),
 		},
 	}
-	
+
 	// If the message is from us, we can't edit a media message, so we'll send a new one
 	// Edit operations only work for text messages, not media
 	_, err := a.client.SendMessage(context.Background(), msgInfo.Chat, msg)
@@ -156,7 +156,7 @@ func (c *ClientAdapter) Upload(ctx context.Context, data []byte, appInfo framewo
 	if err != nil {
 		return framework.UploadResponse{}, err
 	}
-	
+
 	return framework.UploadResponse{
 		URL:           resp.URL,
 		DirectPath:    resp.DirectPath,
@@ -207,7 +207,7 @@ func (m *MemeGeneratorAdapter) GetRandomMeme(ctx context.Context, subreddit stri
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert to framework.MemeResponse
 	memes := make([]framework.Meme, len(resp.Memes))
 	for i, meme := range resp.Memes {
@@ -217,7 +217,7 @@ func (m *MemeGeneratorAdapter) GetRandomMeme(ctx context.Context, subreddit stri
 			Subreddit: meme.Subreddit,
 		}
 	}
-	
+
 	return &framework.MemeResponse{Memes: memes}, nil
 }
 

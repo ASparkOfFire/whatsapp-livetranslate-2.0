@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
-	
+
 	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/types"
 	waProto "go.mau.fi/whatsmeow/proto/waE2E"
+	"go.mau.fi/whatsmeow/types"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -35,7 +35,7 @@ func (m *MediaUploader) UploadDocument(ctx context.Context, docData []byte, file
 	// The whatsmeow library doesn't directly support setting MIME types for documents
 	// The MIME type is determined by WhatsApp based on the file content
 	// We'll pass the filename which helps with recognition
-	
+
 	return m.client.Upload(ctx, docData, MediaDocument)
 }
 
@@ -44,7 +44,7 @@ func (m *MediaUploader) UploadAndSendImage(ctx context.Context, to types.JID, im
 	if err != nil {
 		return fmt.Errorf("failed to upload image: %w", err)
 	}
-	
+
 	msg := &waProto.Message{
 		ImageMessage: &waProto.ImageMessage{
 			Caption:       proto.String(caption),
@@ -57,7 +57,7 @@ func (m *MediaUploader) UploadAndSendImage(ctx context.Context, to types.JID, im
 			FileLength:    proto.Uint64(uploaded.FileLength),
 		},
 	}
-	
+
 	_, err = m.client.SendMessage(ctx, to, msg)
 	return err
 }
@@ -67,7 +67,7 @@ func (m *MediaUploader) UploadAndSendVideo(ctx context.Context, to types.JID, vi
 	if err != nil {
 		return fmt.Errorf("failed to upload video: %w", err)
 	}
-	
+
 	msg := &waProto.Message{
 		VideoMessage: &waProto.VideoMessage{
 			Caption:       proto.String(caption),
@@ -80,7 +80,7 @@ func (m *MediaUploader) UploadAndSendVideo(ctx context.Context, to types.JID, vi
 			FileLength:    proto.Uint64(uploaded.FileLength),
 		},
 	}
-	
+
 	_, err = m.client.SendMessage(ctx, to, msg)
 	return err
 }
@@ -90,7 +90,7 @@ func (m *MediaUploader) UploadAndSendDocument(ctx context.Context, to types.JID,
 	if err != nil {
 		return fmt.Errorf("failed to upload document: %w", err)
 	}
-	
+
 	// Set MIME type based on file extension
 	mimeType := "application/octet-stream"
 	ext := strings.ToLower(filepath.Ext(filename))
@@ -104,7 +104,7 @@ func (m *MediaUploader) UploadAndSendDocument(ctx context.Context, to types.JID,
 	case ".txt":
 		mimeType = "text/plain"
 	}
-	
+
 	msg := &waProto.Message{
 		DocumentMessage: &waProto.DocumentMessage{
 			Caption:       proto.String(caption),
@@ -118,7 +118,7 @@ func (m *MediaUploader) UploadAndSendDocument(ctx context.Context, to types.JID,
 			FileLength:    proto.Uint64(uploaded.FileLength),
 		},
 	}
-	
+
 	_, err = m.client.SendMessage(ctx, to, msg)
 	return err
 }
@@ -129,16 +129,16 @@ func DownloadMedia(url string) ([]byte, error) {
 		return nil, fmt.Errorf("failed to download media: %w", err)
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("failed to download media: status %d", resp.StatusCode)
 	}
-	
+
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read media data: %w", err)
 	}
-	
+
 	return data, nil
 }
 

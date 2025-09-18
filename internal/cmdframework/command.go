@@ -2,10 +2,10 @@ package cmdframework
 
 import (
 	"context"
-	
+
 	"go.mau.fi/whatsmeow"
-	"go.mau.fi/whatsmeow/types"
 	waProto "go.mau.fi/whatsmeow/proto/waE2E"
+	"go.mau.fi/whatsmeow/types"
 )
 
 type Command interface {
@@ -46,14 +46,14 @@ const (
 
 type Context struct {
 	context.Context
-	
+
 	// Message info
 	Message     *waProto.Message
 	MessageInfo types.MessageInfo
 	Command     string
 	Args        []string
 	RawArgs     string
-	
+
 	// Services
 	Handler HandlerInterface
 }

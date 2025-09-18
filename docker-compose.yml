@@ -7,6 +7,7 @@ services:
     environment:
       IS_DOCKER: "true"
       GEMINI_API_KEY: ${GEMINI_API_KEY}
+      HIBP_TOKEN: ${HIBP_TOKEN}
     volumes:
       - whatsapp-go:/data
       - firefox-config:/root

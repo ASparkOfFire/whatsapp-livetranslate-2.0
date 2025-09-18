@@ -99,6 +99,7 @@ go build -o whatsapp-livetranslate .
 | `GEMINI_KEY` | Google Gemini API key for AI features | Yes |
 | `YOUTUBE_VISITOR_DATA` | YouTube visitor data for bypassing some restrictions | No |
 | `COOKIES_PATH` | Path to cookies.txt for non-YouTube sites (Instagram, Twitter, etc.) | No |
+| `HIBP_TOKEN` | API token for Have I Been Pwned dark web search (owner only) | No |
 
 ### YouTube Visitor Data (Optional)
 
@@ -160,6 +161,7 @@ This helps with:
 - `/supportedlangs` - List all supported languages
 - `/download <url>` - Download media from social platforms
 - `/dl <url>` - Alias for download
+- `/hibp <phone_or_identifier>` - Check if a phone or identifier has been exposed in data breaches, focusing on HiTeckGroop.in (owner only) - [Documentation](docs/HIBP_COMMAND.md)
 
 ### Fun Commands
 - `/meme [subreddit]` - Get random meme (default: dankmemes)
