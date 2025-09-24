@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -18,13 +19,14 @@ import (
 )
 
 func main() {
-	container, err := sqlstore.New("sqlite3", "file:/data/auth.db?_foreign_keys=on", nil)
+	ctx := context.Background()
+	container, err := sqlstore.New(ctx, "sqlite3", "file:/data/auth.db?_foreign_keys=on", nil)
 	if err != nil {
 		log.Fatalf("error while opening a database connection: %v\n", err)
 		return
 	}
 
-	deviceStore, err := container.GetFirstDevice()
+	deviceStore, err := container.GetFirstDevice(ctx)
 	if err != nil {
 		log.Fatalf("error while getting the device store : %v\n", err)
 		return
