@@ -32,7 +32,7 @@ func NewGeminiTranslateService(geminiAPIKey string) services.TranslateService {
 
 	return &geminiTranslateService{
 		client:             client,
-		modelID:            constants.GeminiModel20Flash,
+		modelID:            constants.Gemini20FlashLite,
 		generateContentAPI: "streamGenerateContent",
 		geminiAPIKey:       geminiAPIKey,
 		maxRetries:         3,
@@ -141,12 +141,17 @@ func (g *geminiTranslateService) executeTranslation(text string, sourceLang ling
 
 func (g *geminiTranslateService) SetModel(modelID string) error {
 	model := constants.GeminiModel(modelID)
-	if !constants.ValidGeminiModels[model] {
-		return fmt.Errorf("invalid model ID: %s. Supported models are: %s, %s, %s",
-			modelID,
-			constants.GeminiModel15Flash,
-			constants.GeminiModel20Flash,
-			constants.GeminiModel25Flash)
+	if _, ok := constants.ValidGeminiModels[model]; !ok {
+		// Build the list of supported models dynamically
+		var supportedModels []string
+		for modelID := range constants.ValidGeminiModels {
+			supportedModels = append(supportedModels, string(modelID))
+		}
+
+		return fmt.Errorf("invalid model ID: %s. Supported models are: %s",
+			model,
+			strings.Join(supportedModels, ", "),
+		)
 	}
 
 	g.modelID = model

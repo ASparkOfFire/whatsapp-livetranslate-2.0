@@ -3,9 +3,10 @@ package constants
 type GeminiModel string
 
 const (
-	GeminiModel15Flash GeminiModel = "gemini-1.5-flash"
-	GeminiModel20Flash GeminiModel = "gemini-2.0-flash"
-	GeminiModel25Flash GeminiModel = "gemini-2.5-flash-preview-05-20"
+	Gemini20Flash     GeminiModel = "gemini-2.0-flash"
+	Gemini20FlashLite GeminiModel = "gemini-2.0-flash-lite"
+	Gemini25Flash     GeminiModel = "gemini-2.5-flash"
+	Gemini25FlashLite GeminiModel = "gemini-2.5-flash-lite"
 
 	// Temperature constants
 	MinTemperature     float64 = 0.0
@@ -14,11 +15,12 @@ const (
 )
 
 const (
-	GeminiModelImageGenerator GeminiModel = "gemini-2.0-flash-preview-image-generation"
+	GeminiModelImageGenerator GeminiModel = "gemini-2.5-flash-image"
 )
 
 var ValidGeminiModels = map[GeminiModel]bool{
-	GeminiModel15Flash: true,
-	GeminiModel20Flash: true,
-	GeminiModel25Flash: true,
+	Gemini20Flash:     true,
+	Gemini20FlashLite: true,
+	Gemini25Flash:     true,
+	Gemini25FlashLite: true,
 }
