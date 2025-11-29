@@ -4,12 +4,12 @@ go 1.24.1
 
 require (
 	github.com/joho/godotenv v1.5.1
-	github.com/lrstanley/go-ytdlp v1.2.4
+	github.com/lrstanley/go-ytdlp v1.2.7
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/mdp/qrterminal/v3 v3.2.1
 	github.com/pemistahl/lingua-go v1.4.0
-	go.mau.fi/whatsmeow v0.0.0-20250922112717-258fd9454b95
-	google.golang.org/protobuf v1.36.9
+	go.mau.fi/whatsmeow v0.0.0-20251127132918-b9ac3d51d746
+	google.golang.org/protobuf v1.36.10
 )
 
 require (
@@ -17,23 +17,23 @@ require (
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
 	github.com/beeper/argo-go v1.1.2 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/coder/websocket v1.8.14 // indirect
 	github.com/elliotchance/orderedmap/v3 v3.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/petermattis/goid v0.0.0-20250904145737-900bdf8bb490 // indirect
+	github.com/petermattis/goid v0.0.0-20251121121749-a11dd1a45f9a // indirect
 	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
-	github.com/vektah/gqlparser/v2 v2.5.30 // indirect
-	go.mau.fi/libsignal v0.2.0 // indirect
-	go.mau.fi/util v0.9.1 // indirect
-	golang.org/x/crypto v0.42.0 // indirect
-	golang.org/x/exp v0.0.0-20250911091902-df9299821621 // indirect
-	golang.org/x/net v0.44.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/term v0.35.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	github.com/vektah/gqlparser/v2 v2.5.31 // indirect
+	go.mau.fi/libsignal v0.2.1 // indirect
+	go.mau.fi/util v0.9.3 // indirect
+	golang.org/x/crypto v0.45.0 // indirect
+	golang.org/x/exp v0.0.0-20251125195548-87e1e737ad39 // indirect
+	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/term v0.37.0 // indirect
+	golang.org/x/text v0.31.0 // indirect
 	rsc.io/qr v0.2.0 // indirect
 )
