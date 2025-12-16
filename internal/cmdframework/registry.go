@@ -61,6 +61,47 @@ func (r *Registry) Register(cmd Command) error {
 	return nil
 }
 
+func (r *Registry) UpdateCommand(name string, cmd Command) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	name = strings.ToLower(name)
+
+	if _, exists := r.commands[name]; !exists {
+		return fmt.Errorf("command %s not found", name)
+	}
+
+	// Get the existing command's metadata to handle category updates correctly
+	existingCmd := r.commands[name]
+	existingMeta := existingCmd.Metadata()
+
+	// Update the command
+	r.commands[name] = cmd
+
+	// If category is different, update category mappings accordingly
+	newMeta := cmd.Metadata()
+	if existingMeta.Category != newMeta.Category {
+		// Remove from old category
+		oldCategory := existingMeta.Category
+		if oldCategory != "" {
+			var updatedSlice []string
+			for _, catName := range r.categories[oldCategory] {
+				if strings.ToLower(catName) != name {
+					updatedSlice = append(updatedSlice, catName)
+				}
+			}
+			r.categories[oldCategory] = updatedSlice
+		}
+		// Add to new category
+		newCategory := newMeta.Category
+		if newCategory != "" {
+			r.categories[newCategory] = append(r.categories[newCategory], name)
+		}
+	}
+
+	return nil
+}
+
 func (r *Registry) Get(name string) (Command, bool) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()

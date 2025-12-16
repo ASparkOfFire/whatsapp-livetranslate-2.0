@@ -164,13 +164,14 @@ func (h *WhatsMeowEventHandler) InitializeCommands() error {
 		return fmt.Errorf("failed to register translation commands: %w", err)
 	}
 
-	// Apply middleware to commands that need owner permissions
-	ownerCommands := []string{"ping", "setmodel", "settemp", "image", "meme", "randmoji", "haha", "download", "hibp", "afk", "noafk"}
-	for _, cmdName := range ownerCommands {
-		if cmd, exists := registry.Get(cmdName); exists {
+	// Apply middleware to commands that need owner permissions based on metadata
+	allCommands := registry.GetAll()
+	for name, cmd := range allCommands {
+		meta := cmd.Metadata()
+		if meta.RequireOwner {
 			wrappedCmd := framework.WithMiddleware(cmd, framework.RequireOwner())
-			// Re-register with middleware
-			registry.Register(wrappedCmd)
+			// Update the command with middleware
+			registry.UpdateCommand(name, wrappedCmd)
 		}
 	}
 
