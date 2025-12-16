@@ -20,6 +20,7 @@ type WhatsMeowEventHandler struct {
 	imageGenerator  services.ImageGenerator
 	memeGenerator   *memegenerator.MemeGenerator
 	commandRegistry *framework.Registry
+	isAfkMode       bool
 }
 
 func NewWhatsMeowEventHandler(client *whatsmeow.Client, detector services.LangDetectService, translator services.TranslateService, imageGenerator services.ImageGenerator) (*WhatsMeowEventHandler, error) {
@@ -54,6 +55,14 @@ func (h *WhatsMeowEventHandler) HandleEvents(evt any) {
 	case *events.Message:
 		h.handleMessage(v.Message, v.Info)
 	}
+}
+
+func (h *WhatsMeowEventHandler) SetAfkMode(enabled bool) {
+	h.isAfkMode = enabled
+}
+
+func (h *WhatsMeowEventHandler) IsAfkMode() bool {
+	return h.isAfkMode
 }
 
 func (h *WhatsMeowEventHandler) setupQRLogin() error {

@@ -38,6 +38,12 @@ func (h *WhatsMeowEventHandler) handleMessage(msg *waProto.Message, msgInfo type
 			rawArgs = strings.Join(parts[1:], " ")
 		}
 	} else {
+		// Handle non-command messages - check for AFK mode
+		if h.IsAfkMode() {
+			adapter := NewHandlerAdapter(h)
+			response := `The person you are trying to reach is not available at the moment, in case of an urgency - Reach out via call.`
+			_ = adapter.SendResponse(msgInfo, response)
+		}
 		return
 	}
 
@@ -109,6 +115,16 @@ func (h *WhatsMeowEventHandler) InitializeCommands() error {
 		return fmt.Errorf("failed to register hibp command: %w", err)
 	}
 
+	afkCmd := utility.NewAfkCommand(h)
+	if err := registry.Register(afkCmd); err != nil {
+		return fmt.Errorf("failed to register afk command: %w", err)
+	}
+
+	noAfkCmd := utility.NewNoAfkCommand(h)
+	if err := registry.Register(noAfkCmd); err != nil {
+		return fmt.Errorf("failed to register noafk command: %w", err)
+	}
+
 	// Register admin commands
 	if err := registry.Register(admin.NewSetModelCommand()); err != nil {
 		return fmt.Errorf("failed to register setmodel command: %w", err)
@@ -149,7 +165,7 @@ func (h *WhatsMeowEventHandler) InitializeCommands() error {
 	}
 
 	// Apply middleware to commands that need owner permissions
-	ownerCommands := []string{"ping", "setmodel", "settemp", "image", "meme", "randmoji", "haha", "download", "hibp"}
+	ownerCommands := []string{"ping", "setmodel", "settemp", "image", "meme", "randmoji", "haha", "download", "hibp", "afk", "noafk"}
 	for _, cmdName := range ownerCommands {
 		if cmd, exists := registry.Get(cmdName); exists {
 			wrappedCmd := framework.WithMiddleware(cmd, framework.RequireOwner())
