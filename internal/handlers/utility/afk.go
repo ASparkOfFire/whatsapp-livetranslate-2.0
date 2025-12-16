@@ -2,24 +2,28 @@ package utility
 
 import (
 	framework "github.com/asparkoffire/whatsapp-livetranslate-go/internal/cmdframework"
-	messagehandler "github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/messagehandler"
 )
 
+type AfkModeController interface {
+	SetAfkMode(bool)
+	IsAfkMode() bool
+}
+
 type AfkCommand struct {
-	eventHandler *messagehandler.WhatsMeowEventHandler
+	eventHandler AfkModeController
 }
 
 type NoAfkCommand struct {
-	eventHandler *messagehandler.WhatsMeowEventHandler
+	eventHandler AfkModeController
 }
 
-func NewAfkCommand(eventHandler *messagehandler.WhatsMeowEventHandler) *AfkCommand {
+func NewAfkCommand(eventHandler AfkModeController) *AfkCommand {
 	return &AfkCommand{
 		eventHandler: eventHandler,
 	}
 }
 
-func NewNoAfkCommand(eventHandler *messagehandler.WhatsMeowEventHandler) *NoAfkCommand {
+func NewNoAfkCommand(eventHandler AfkModeController) *NoAfkCommand {
 	return &NoAfkCommand{
 		eventHandler: eventHandler,
 	}
