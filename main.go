@@ -13,6 +13,7 @@ import (
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/gemini"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/messagehandler"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/ollama"
 	_ "github.com/mattn/go-sqlite3"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/store/sqlstore"
@@ -33,7 +34,7 @@ func main() {
 	}
 
 	client := whatsmeow.NewClient(deviceStore, nil)
-	translator := gemini.NewGeminiTranslateService(config.AppConfig.GeminiAPIKey)
+	translator := ollama.NewOllamaTranslator(config.AppConfig.OllamaModel, config.AppConfig.OllamaBaseUrl)
 	imageGenerator := gemini.NewGeminiImageGenerator(string(constants.GeminiModelImageGenerator), config.AppConfig.GeminiAPIKey)
 
 	// Initialize the language detector with supported languages

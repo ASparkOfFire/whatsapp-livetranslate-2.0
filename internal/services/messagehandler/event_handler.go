@@ -111,10 +111,6 @@ func (h *WhatsMeowEventHandler) InitializeCommands() error {
 		return fmt.Errorf("failed to register sed command: %w", err)
 	}
 
-	if err := registry.Register(utility.NewHIBPCommand()); err != nil {
-		return fmt.Errorf("failed to register hibp command: %w", err)
-	}
-
 	afkCmd := utility.NewAfkCommand(h)
 	if err := registry.Register(afkCmd); err != nil {
 		return fmt.Errorf("failed to register afk command: %w", err)
