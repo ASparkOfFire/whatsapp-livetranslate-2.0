@@ -13,7 +13,7 @@ import (
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/gemini"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/messagehandler"
-	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/ollama"
+	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/openrouter"
 	_ "github.com/mattn/go-sqlite3"
 	"go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/store/sqlstore"
@@ -21,7 +21,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	container, err := sqlstore.New(ctx, "sqlite3", "file:/data/auth.db?_foreign_keys=on", nil)
+	container, err := sqlstore.New(ctx, "sqlite3", "file:./data/auth.db?_foreign_keys=on", nil)
 	if err != nil {
 		log.Fatalf("error while opening a database connection: %v\n", err)
 		return
@@ -34,7 +34,7 @@ func main() {
 	}
 
 	client := whatsmeow.NewClient(deviceStore, nil)
-	translator := ollama.NewOllamaTranslator(config.AppConfig.OllamaModel, config.AppConfig.OllamaBaseUrl)
+	translator := openrouter.NewOpenrouterTranslator(config.AppConfig.OpenrouterModel, config.AppConfig.OpenrouterBaseUrl, config.AppConfig.OpenrouterApiKey)
 	imageGenerator := gemini.NewGeminiImageGenerator(string(constants.GeminiModelImageGenerator), config.AppConfig.GeminiAPIKey)
 
 	// Initialize the language detector with supported languages

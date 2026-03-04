@@ -11,6 +11,10 @@ type config struct {
 	GeminiAPIKey  string
 	OllamaModel   string
 	OllamaBaseUrl string
+
+	OpenrouterModel   string
+	OpenrouterBaseUrl string
+	OpenrouterApiKey  string
 }
 
 var (
@@ -26,4 +30,8 @@ func init() {
 
 	AppConfig.OllamaModel = os.Getenv("OLLAMA_MODEL")
 	AppConfig.OllamaBaseUrl = os.Getenv("OLLAMA_BASEURL")
+
+	AppConfig.OpenrouterBaseUrl = os.Getenv("OPENROUTER_BASEURL")
+	AppConfig.OpenrouterModel = os.Getenv("OPENROUTER_MODEL")
+	AppConfig.OpenrouterApiKey = os.Getenv("OPENROUTER_APIKEY")
 }
