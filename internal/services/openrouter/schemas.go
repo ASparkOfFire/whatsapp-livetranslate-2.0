@@ -74,3 +74,60 @@ type OpenrouterTranslateResponseSchema struct {
 type ModelOutputSchema struct {
 	Output string `json:"output"`
 }
+
+type OpenrouterImageGenerationRequestSchema struct {
+	Model    string `json:"model"`
+	Messages []struct {
+		Role    string `json:"role"`
+		Content string `json:"content"`
+	} `json:"messages"`
+}
+
+type OpenrouterImageGenerationResponseSchema struct {
+	ID       string `json:"id"`
+	Object   string `json:"object"`
+	Created  int    `json:"created"`
+	Model    string `json:"model"`
+	Provider string `json:"provider"`
+	Choices  []struct {
+		Index              int    `json:"index"`
+		Logprobs           any    `json:"logprobs"`
+		FinishReason       string `json:"finish_reason"`
+		NativeFinishReason any    `json:"native_finish_reason"`
+		Message            struct {
+			Role      string `json:"role"`
+			Content   any    `json:"content"`
+			Refusal   any    `json:"refusal"`
+			Reasoning any    `json:"reasoning"`
+			Images    []struct {
+				Type     string `json:"type"`
+				ImageURL struct {
+					URL string `json:"url"`
+				} `json:"image_url"`
+			} `json:"images"`
+		} `json:"message"`
+	} `json:"choices"`
+	Usage struct {
+		PromptTokens        int     `json:"prompt_tokens"`
+		CompletionTokens    int     `json:"completion_tokens"`
+		TotalTokens         int     `json:"total_tokens"`
+		Cost                float64 `json:"cost"`
+		IsByok              bool    `json:"is_byok"`
+		PromptTokensDetails struct {
+			CachedTokens     int `json:"cached_tokens"`
+			CacheWriteTokens int `json:"cache_write_tokens"`
+			AudioTokens      int `json:"audio_tokens"`
+			VideoTokens      int `json:"video_tokens"`
+		} `json:"prompt_tokens_details"`
+		CostDetails struct {
+			UpstreamInferenceCost            float64 `json:"upstream_inference_cost"`
+			UpstreamInferencePromptCost      int     `json:"upstream_inference_prompt_cost"`
+			UpstreamInferenceCompletionsCost float64 `json:"upstream_inference_completions_cost"`
+		} `json:"cost_details"`
+		CompletionTokensDetails struct {
+			ReasoningTokens int `json:"reasoning_tokens"`
+			ImageTokens     int `json:"image_tokens"`
+			AudioTokens     int `json:"audio_tokens"`
+		} `json:"completion_tokens_details"`
+	} `json:"usage"`
+}

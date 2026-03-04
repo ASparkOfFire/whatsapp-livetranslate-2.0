@@ -12,9 +12,10 @@ type config struct {
 	OllamaModel   string
 	OllamaBaseUrl string
 
-	OpenrouterModel   string
-	OpenrouterBaseUrl string
-	OpenrouterApiKey  string
+	OpenrouterModel      string
+	OpenrouterBaseUrl    string
+	OpenrouterApiKey     string
+	OpenrouterImageModel string
 }
 
 var (
@@ -34,4 +35,5 @@ func init() {
 	AppConfig.OpenrouterBaseUrl = os.Getenv("OPENROUTER_BASEURL")
 	AppConfig.OpenrouterModel = os.Getenv("OPENROUTER_MODEL")
 	AppConfig.OpenrouterApiKey = os.Getenv("OPENROUTER_APIKEY")
+	AppConfig.OpenrouterImageModel = os.Getenv("OPENROUTER_IMAGE_MODEL")
 }

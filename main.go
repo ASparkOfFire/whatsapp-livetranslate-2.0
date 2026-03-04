@@ -11,7 +11,6 @@ import (
 	"github.com/asparkoffire/whatsapp-livetranslate-go/config"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/constants"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services"
-	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/gemini"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/messagehandler"
 	"github.com/asparkoffire/whatsapp-livetranslate-go/internal/services/openrouter"
 	_ "github.com/mattn/go-sqlite3"
@@ -35,7 +34,7 @@ func main() {
 
 	client := whatsmeow.NewClient(deviceStore, nil)
 	translator := openrouter.NewOpenrouterTranslator(config.AppConfig.OpenrouterModel, config.AppConfig.OpenrouterBaseUrl, config.AppConfig.OpenrouterApiKey)
-	imageGenerator := gemini.NewGeminiImageGenerator(string(constants.GeminiModelImageGenerator), config.AppConfig.GeminiAPIKey)
+	imageGenerator := openrouter.NewOpenrouterImageGenerator(config.AppConfig.OpenrouterImageModel, config.AppConfig.OpenrouterBaseUrl, config.AppConfig.OpenrouterApiKey)
 
 	// Initialize the language detector with supported languages
 	detector := services.NewLinguaLangDetectService(constants.SupportedLanguages)
