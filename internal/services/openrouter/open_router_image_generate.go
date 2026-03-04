@@ -27,7 +27,7 @@ func NewOpenrouterImageGenerator(model, baseurl, apikey string) services.ImageGe
 		Model:   model,
 		BaseUrl: baseurl,
 		apiKey:  apikey,
-		client:  http.Client{Timeout: time.Second * 10},
+		client:  http.Client{Timeout: time.Second * 60},
 	}
 }
 
