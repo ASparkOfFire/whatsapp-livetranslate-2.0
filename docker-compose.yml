@@ -10,6 +10,10 @@ services:
       IS_DOCKER: "true"
       OLLAMA_MODEL: "ollama-translator"
       OLLAMA_BASEURL: "http://host.docker.internal:11434"
+      OPENROUTER_BASEURL: ${OPENROUTER_BASEURL}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL}
+      OPENROUTER_APIKEY: ${OPENROUTER_APIKEY}
+
     volumes:
       - whatsapp-go:/data
 volumes:
